@@ -24,7 +24,7 @@ def main():
 							overdict[elem.attrib['best_effort_timestamp_time']] = t.attrib['value'] #pop the timestamp, value into a dict
 							#foo = raw_input("eh")
 			elem.clear() #we're done with that element so let's get it outta memory
-	#do some maths
+	#do some maths for the printout
 	pctover = len(overdict) / float(count)
 	pctstr = str(pctover)
 	pctstr = pctstr[2:4] + "." + pctstr[4:]
@@ -32,10 +32,3 @@ def main():
 	print "Which is " + pctstr + "% of the total # of frames"
 	return
 main()
-#if event == 'start':
-#		path.append(elem.tag)
-#		if elem.tag == 'tag':
-#			if elem.attrib['key'] == 'lavfi.signalstats.YMAX':
-#				print path
-#				#if elem.attrib['value'] >= 233:
-#					#framelist.append
