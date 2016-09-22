@@ -12,20 +12,20 @@ scripts for parsing qctools reports
   
   -u, --under             | the threshold under number
   
-  -buff, --buffSize         | Size of the circular buffer. if user enters an even number it'll default to the next largest number to make it odd (default size 11)
+  -buff, --buffSize         | Size of the circular buffer. if user enters an even number it'll default to the next largest number to make it odd, default size 11
                         
-  -te, --thumbExport        | export thumbnails y/n
+  -te, --thumbExport        | export thumbnails on/ off, default off
   
-  -ted, --thumbExportDelay  | minimum frames between exported thumbs
+  -ted, --thumbExportDelay  | minimum frames between exported thumbs, default 9000
                         
-  -tep, --thumbExportPath   | Path to thumb export. if ommitted, it uses the input basename
+  -tep, --thumbExportPath   | Path to thumb export. if ommitted, uses the input base-path
                         
-  -ds, --durationStart      | the duration in seconds to start analysis
+  -ds, --durationStart      | the duration in seconds to start analysis (ffmpeg equivalent -ss)
                         
-  -de, --durationEnd        | the duration in seconds to stop analysis
+  -de, --durationEnd        | the duration in seconds to stop analysis (ffmpeg equivalent -t)
                         
-  -bd, --barsDetection      | turns Bar Detection on and off
+  -bd, --barsDetection      | bar detection on/ off, default off
   
-  -p, --print               | print over/under frame data to console window
+  -p, --print               | print over/under frame data to console window, default off
   
-  -q, --quiet               | print ffmpeg output to console window
+  -q, --quiet               | print ffmpeg output to console window, default off
