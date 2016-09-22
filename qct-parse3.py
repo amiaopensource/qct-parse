@@ -172,10 +172,11 @@ def printresults(count,overcount):
 	
 def main():
 	####init the stuff from the cli########
-	parser = argparse.ArgumentParser()
-	parser.add_argument('-i','--input',dest='i',help="the path to the input qctools.xml.gz file")
-	parser.add_argument('-t','--tagname',dest='t',help="the tag name you want to test, e.g. SATMAX")
-	parser.add_argument('-o','--over',dest='o',help="the threshold overage number")
+	parser = argparse.ArgumentParser(description="parses QCTools XML files for frames beyond broadcast values")
+	parser.add_argument('-i','--input',dest='i', help="the path to the input qctools.xml.gz file")
+	parser.add_argument('-t','--tagname',dest='t', help="the tag name you want to test, e.g. SATMAX")
+	parser.add_argument('-o','--over',dest='o', help="the threshold overage number")
+	parser.add_argument('-u','--under',dest='u', help="the threshold under number")
 	parser.add_argument('-buff','--buffSize',dest='buff',default=11, help="Size of the circular buffer. if user enters an even number it'll default to the next largest number to make it odd (default size 11)")
 	parser.add_argument('-te','--thumbExport',dest='te',action='store_true',default=False, help="export thumbnail")
 	parser.add_argument('-ted','--thumbExportDelay',dest='ted',default=9000, help="minimum frames between exported thumbs")
