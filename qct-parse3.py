@@ -12,6 +12,8 @@ import subprocess		#not currently used
 import gc				#not currently used
 import math				#used for rounding up buffer half
 import sys				#system stuff
+import re				#can't spell parse without re fam
+from distutils import spawn #dependency checking
 
 #check that we have required software installed
 def dependencies():
@@ -58,29 +60,41 @@ def initLog(inputPath):
 	logging.info("Started QCT-Parse")
 	
 #Finds Overs
-def overFinder(inFrame, args, thumbPath, thumbDelay):
+def overFinder(inFrame,args,startObj,thumbPath,thumbDelay):
 	####init some variables using the args list
-	inputVid = args.i.replace(".qctools.xml.gz", "")
-	baseName = os.path.basename(args.i)
+	inputVid = startObj.replace(".qctools.xml.gz", "")
+	baseName = os.path.basename(startObj)
 	baseName = baseName.replace(".qctools.xml.gz", "")
 	tagValue = int(inFrame[args.t])
-	
+
 	####czech for overs
 	frame_pkt_dts_time = inFrame['pkt_dts_time']
 	if tagValue > int(args.o): #if the attribute is over usr set threshold
 		timeStampString = dts2ts(frame_pkt_dts_time)
 		logging.warning(args.t + " is over " + args.o + " with a value of " + str(tagValue) + " at duration " + timeStampString)
-		outputFramePath = thumbPath + baseName + "." + args.t + "." + str(tagValue) + "." + timeStampString + ".png"
+		outputFramePath = os.path.join(thumbPath,baseName + "." + args.t + "." + str(tagValue) + "." + timeStampString + ".png")
+		ffoutputFramePath = outputFramePath.replace(":",".")
+		
+		#for windows we gotta see if that first : for the drive has been replaced by a dot and put it back
+		match = ''
+		match = re.search(r"[A-Z]\.\/",ffoutputFramePath) #matches pattern R./ which should be R:/ on windows
+		if match:
+			ffoutputFramePath = ffoutputFramePath.replace(".",":",1) #replace first instance of "." in string ffoutputFramePath
+		
+		#ok do the thing
 		if args.te and (thumbDelay > int(args.ted)): #if thumb export is turned on and there has been enough delay between this frame and the last exported thumb, then export a new thumb
-			ffmpegString = "ffmpeg -i '" + inputVid + "' -ss " + timeStampString + " -vframes 1 -y '" + outputFramePath.replace(":",".") + "' >/dev/null 2>&1"
-		#	print ffmpegString
-		#	os.system(ffmpegString)
+			ffmpegString = "ffmpeg -ss " + timeStampString + " -i " + inputVid +  " -vframes 1 -y " + ffoutputFramePath
+			output = subprocess.Popen(ffmpegString,stdout=subprocess.PIPE,stderr=subprocess.PIPE) #,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True
+			out,err = output.communicate()
+			if args.q is True:
+				print out
+				print err
 			thumbDelay = 0 	
 		return 1, thumbDelay #return 1 because it was over and thumbDelay
 	return 0, thumbDelay #return 1 because it was NOT over and thumbDelay
 
-def detectBars(args.i,durationStart,durationEnd):
-	with gzip.open(args.i) as xml:	
+def detectBars(args,startObj,durationStart,durationEnd,framesList,buffSize):
+	with gzip.open(startObj) as xml:	
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): #iterparse the xml doc
 			if elem.attrib['media_type'] == "video": #get just the video frames
 				frame_pkt_dts_time = elem.attrib['pkt_dts_time'] #get the timestamps for the current frame we're looking at
@@ -106,8 +120,8 @@ def detectBars(args.i,durationStart,durationEnd):
 			elem.clear() #we're done with that element so let's get it outta memory
 	return
 
-def analyzeIt(args,durationStart,durationEnd,thumbPath,thumbDelay):
-	with gzip.open(args.i) as xml:	
+def analyzeIt(args,startObj,durationStart,durationEnd,thumbPath,thumbDelay,framesList,count=0,overcount=0):
+	with gzip.open(startObj) as xml:	
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): #iterparse the xml doc
 			if elem.attrib['media_type'] == "video": #get just the video frames
 				frame_pkt_dts_time = elem.attrib['pkt_dts_time'] #get the timestamps for the current frame we're looking at
@@ -132,7 +146,7 @@ def analyzeIt(args,durationStart,durationEnd,thumbPath,thumbDelay):
 					#use the overFinder() function to find overs
 					frameOver = 0
 					if args.o:
-						frameOver, thumbDelay = overFinder(framesList[-1], args, thumbPath, thumbDelay)
+						frameOver, thumbDelay = overFinder(framesList[-1],args,startObj,thumbPath,thumbDelay)
 						if frameOver == 1:
 							overcount = overcount + 1
 					count = count + 1	
@@ -143,17 +157,17 @@ def analyzeIt(args,durationStart,durationEnd,thumbPath,thumbDelay):
 def printresults(count,overcount):
 	if count == 0:
 			percentOverString = "0"
+	else:
+		percentOver = float(overcount) / float(count)
+		if percentOver == 1:
+			percentOverString = "100"
 		else:
-			percentOver = float(overcount) / float(count)
-			if percentOver == 1:
-				percentOverString = "100"
-			else:
-				percentOverString = str(percentOver)
-				percentOverString = percentOverString[2:4] + "." + percentOverString[4:]
-		print "Number of frames over threshold= " + str(overcount)
-		print "Which is " + percentOverString + "% of the total # of frames"
-		print "##############################################################"
-		print ""
+			percentOverString = str(percentOver)
+			percentOverString = percentOverString[2:4] + "." + percentOverString[4:]
+	print "Number of frames over threshold= " + str(overcount)
+	print "Which is " + percentOverString + "% of the total # of frames"
+	#print "##############################################################"
+	print ""
 	return
 	
 def main():
@@ -170,33 +184,36 @@ def main():
 	parser.add_argument('-de','--durationEnd',dest='de',default=99999999, help="the duration in seconds to stop analysis")
 	parser.add_argument('-bd','--barsDetection',dest='bd',action ='store_true',default=False, help="turns Bar Detection on and off")
 	parser.add_argument('-p','--print',dest='p',action='store_true',default=False, help="print over/under frame data to console window")
+	parser.add_argument('-q','--quiet',dest='q',action='store_true',default=False, help="print ffmpeg output to console window")
 	args = parser.parse_args()
 
 	######Initialize some other stuff######
-	
+	startObj = args.i.replace("\\","/")
 	buffSize = int(args.buff)   #cast the input buffer as an integer
 	if buffSize%2 == 0:
 		buffSize = buffSize + 1
-	initLog(args.i)	#initialize the log
+	initLog(startObj)	#initialize the log
 	overcount = 0	#init count of overs
 	undercount = 0	#init count of unders
 	count = 0		#init total frames counter
 	framesList = collections.deque(maxlen=buffSize)		#init holding object for holding all frame data in a circular buffer. 
 	bdFramesList = collections.deque(maxlen=buffSize) 	#init holding object for holding all frame data in a circular buffer. 
 	thumbDelay = int(args.ted)	
-	parentDir = os.path.dirname(args.i)
-	baseName = os.path.basename(args.i)
+	parentDir = os.path.dirname(startObj)
+	baseName = os.path.basename(startObj)
 	baseName = baseName.replace(".qctools.xml.gz", "")
-	
+	durationStart = args.ds
+	durationEnd = args.de
+
 	#set the start and end duration times
 	if args.bd:
 		durationStart = ""				#if bar detection is turned on then we have to calculate this
 		durationEnd = ""				#if bar detection is turned on then we have to calculate this
 	elif args.ds:
 		durationStart = float(args.ds) 	#The duration at which we start analyzing the file if no bar detection is selected
-	elif not args.de == 99999999:	
+	elif not args.de == 99999999:
 		durationEnd = float(args.de) 	#The duration at which we stop analyzing the file if no bar detection is selected
-
+	
 	#set the path for the thumbnail export	
 	if args.tep and not args.te:
 		print "Buddy, you specified a thumbnail export path without specifying that you wanted to export the thumbnails. Please either add '-te' to your cli call or delete '-tep [path]'"
@@ -215,15 +232,18 @@ def main():
 	########Iterate Through the XML for Bars detection########
 	if args.bd:
 		print "Starting Bars Detection on " + baseName
-		detectbars(args.i,durationStart,durationEnd)
+		print ""
+		detectBars(args,startObj,durationStart,durationEnd,framesList,buffSize)
 	
 
 	########Iterate Through the XML for General Analysis########
 	print "Starting Analysis on " + baseName
-	count, overcount = analyzeIt(args,durationStart,durationEnd,thumbPath,thumbDelay)
+	print ""
+	count, overcount = analyzeIt(args,startObj,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
 	
 	
 	print "Finished Processing File: " + baseName + ".qctools.xml.gz"
+	print ""
 	
 	#do some maths for the printout
 	if args.o:
