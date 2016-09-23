@@ -12,6 +12,8 @@ scripts for parsing qctools reports
   
   -u, --under             | the threshold under number
   
+  -p, --profile         | compare frame data aginst tag values from config.txt file, us "-p default" for values from QCTools docs
+  
   -buff, --buffSize         | Size of the circular buffer. if user enters an even number it'll default to the next largest number to make it odd, default size 11
                         
   -te, --thumbExport        | export thumbnails on/ off, default off
