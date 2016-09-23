@@ -28,6 +28,6 @@ scripts for parsing qctools reports
                         
   -bd, --barsDetection      | bar detection on/ off, default off
   
-  -p, --print               | print over/under frame data to console window, default off
+  -pr, --print               | print over/under frame data to console window, default off
   
   -q, --quiet               | print ffmpeg output to console window, default off
