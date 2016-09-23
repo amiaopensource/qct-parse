@@ -1,0 +1,11 @@
+#based on qctools docs
+[default]
+y_min: 16
+y_max: 235
+u_min: 16
+u_max: 235
+v_min: 0
+v_max: 255
+sat_max: 181.02
+tout_max: 0.009
+vrep_max: 0.03
