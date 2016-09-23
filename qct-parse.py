@@ -81,7 +81,7 @@ def printThumb(args,startObj,thumbPath,tagValue,timeStampString):
 	if match:
 		ffoutputFramePath = ffoutputFramePath.replace(".",":",1) #replace first instance of "." in string ffoutputFramePath
 	ffmpegString = "ffmpeg -ss " + timeStampString + " -i " + inputVid +  " -vframes 1 -y " + ffoutputFramePath
-	output = subprocess.Popen(ffmpegString,stdout=subprocess.PIPE,stderr=subprocess.PIPE) #,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True
+	output = subprocess.Popen(ffmpegString,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 	out,err = output.communicate()
 	if args.q is False:
 		print out
@@ -139,7 +139,7 @@ def analyzeIt(args,profile,startObj,durationStart,durationEnd,thumbPath,thumbDel
 					if args.pr is True:	#display "timestamp: Tag Value" (654.754100: YMAX 229) to the terminal window
 						print framesList[-1]['pkt_dts_time'] + ": " + args.t + " " + framesList[-1][args.t]
 					#Now we can parse the frame data from the buffer!	
-					if args.o and args.p is None: #if we're jsut doing a single tag
+					if args.o and args.p is None: #if we're just doing a single tag
 						tag = args.t
 						over = float(args.o)
 						frameOver, thumbDelay = overFinder(framesList[-1],args,startObj,tag,over,thumbPath,thumbDelay)
@@ -151,7 +151,7 @@ def analyzeIt(args,profile,startObj,durationStart,durationEnd,thumbPath,thumbDel
 							over = float(v)
 							frameOver, thumbDelay = overFinder(framesList[-1],args,startObj,tag,over,thumbPath,thumbDelay)
 							if frameOver is True:
-								kover[k] = kover[k] + 1
+								kover[k] = kover[k] + 1 #note the over in the key over dict
 					thumbDelay = thumbDelay + 1					
 			elem.clear() #we're done with that element so let's get it outta memory
 	return kover, frameCount
@@ -282,4 +282,3 @@ def main():
 
 dependencies()	
 main()
-
