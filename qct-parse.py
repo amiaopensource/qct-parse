@@ -114,7 +114,7 @@ def detectBars(args,startObj,durationStart,durationEnd,framesList,buffSize):
 						print "Bars ended at " + str(framesList[middleFrame]['pkt_dts_time']) + " (" + dts2ts(framesList[middleFrame]['pkt_dts_time']) + ")"							
 						break
 			elem.clear() #we're done with that element so let's get it outta memory
-	return
+	return durationStart, durationEnd
 
 def analyzeIt(args,profile,startObj,durationStart,durationEnd,thumbPath,thumbDelay,framesList,frameCount=0):
 	kover = {} #init a dict for each key which we'll use to track how often a given key is over
@@ -127,7 +127,7 @@ def analyzeIt(args,profile,startObj,durationStart,durationEnd,thumbPath,thumbDel
 				frame_pkt_dts_time = elem.attrib['pkt_dts_time'] #get the timestamps for the current frame we're looking at
 				if float(frame_pkt_dts_time) >= durationStart:	#only work on frames that are after the start time
 					if float(frame_pkt_dts_time) > durationEnd:	#only work on frames that are before the end time
-						print "started at " + str(durationStart) + " seconds and stopped at " + str(frame_pkt_dts_time) + " seconds (" + dts2ts(frame_pkt_dts_time) + ") or " + str(count) + " frames!"
+						print "started at " + str(durationStart) + " seconds and stopped at " + str(frame_pkt_dts_time) + " seconds (" + dts2ts(frame_pkt_dts_time) + ") or " + str(frameCount) + " frames!"
 						break
 					frameDict = {}  								#start an empty dict for the new frame
 					frameDict['pkt_dts_time'] = frame_pkt_dts_time  #make a key for the timestamp, which we have now
@@ -156,9 +156,6 @@ def analyzeIt(args,profile,startObj,durationStart,durationEnd,thumbPath,thumbDel
 								kover[k] = kover[k] + 1
 					thumbDelay = thumbDelay + 1					
 			elem.clear() #we're done with that element so let's get it outta memory
-	for k,v in profile.iteritems():
-		print k
-		print kover[k]
 	return kover, frameCount
 
 
@@ -266,7 +263,7 @@ def main():
 	if args.bd:
 		print "Starting Bars Detection on " + baseName
 		print ""
-		detectBars(args,startObj,durationStart,durationEnd,framesList,buffSize)
+		durationStart,durationEnd = detectBars(args,startObj,durationStart,durationEnd,framesList,buffSize)
 	
 
 	########Iterate Through the XML for General Analysis########
