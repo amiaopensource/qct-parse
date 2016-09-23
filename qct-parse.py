@@ -136,18 +136,16 @@ def analyzeIt(args,profile,startObj,durationStart,durationEnd,thumbPath,thumbDel
 						keyName = str(keySplit[-1])             	#get just the last word for the key name
 						frameDict[keyName] = t.attrib['value']		#add each attribute to the frame dictionary
 					framesList.append(frameDict)					#add this dict to our circular buffer
-					if args.p is True:	#display "timestamp: Tag Value" (654.754100: YMAX 229) to the terminal window
+					if args.pr is True:	#display "timestamp: Tag Value" (654.754100: YMAX 229) to the terminal window
 						print framesList[-1]['pkt_dts_time'] + ": " + args.t + " " + framesList[-1][args.t]
 					#Now we can parse the frame data from the buffer!	
-					#use the overFinder() function to find overs
-					#frameOver = 0
-					if args.o and args.uc is None:
+					if args.o and args.p is None: #if we're jsut doing a single tag
 						tag = args.t
 						over = float(args.o)
 						frameOver, thumbDelay = overFinder(framesList[-1],args,startObj,tag,over,thumbPath,thumbDelay)
 						if frameOver is True:
-							kover[tag] = kover[tag] + 1
-					elif args.uc is not None:
+							kover[tag] = kover[tag] + 1 #note the over in the keyover dictionary
+					elif args.p is not None: #if we're using a profile
 						for k,v in profile.iteritems():
 							tag = k
 							over = float(v)
@@ -184,7 +182,7 @@ def main():
 	parser.add_argument('-t','--tagname',dest='t', help="the tag name you want to test, e.g. SATMAX")
 	parser.add_argument('-o','--over',dest='o', help="the threshold overage number")
 	parser.add_argument('-u','--under',dest='u', help="the threshold under number")
-	parser.add_argument('-uc','--useconfig',dest='uc',default=None,help="use values from your qct-parse-config.txt file, provide profile/ template name, e.g. 'default'")
+	parser.add_argument('-p','--profile',dest='p',default=None,help="use values from your qct-parse-config.txt file, provide profile/ template name, e.g. 'default'")
 	parser.add_argument('-buff','--buffSize',dest='buff',default=11, help="Size of the circular buffer. if user enters an even number it'll default to the next largest number to make it odd (default size 11)")
 	parser.add_argument('-te','--thumbExport',dest='te',action='store_true',default=False, help="export thumbnail")
 	parser.add_argument('-ted','--thumbExportDelay',dest='ted',default=9000, help="minimum frames between exported thumbs")
@@ -192,18 +190,18 @@ def main():
 	parser.add_argument('-ds','--durationStart',dest='ds',default=0, help="the duration in seconds to start analysis")
 	parser.add_argument('-de','--durationEnd',dest='de',default=99999999, help="the duration in seconds to stop analysis")
 	parser.add_argument('-bd','--barsDetection',dest='bd',action ='store_true',default=False, help="turns Bar Detection on and off")
-	parser.add_argument('-p','--print',dest='p',action='store_true',default=False, help="print over/under frame data to console window")
+	parser.add_argument('-pr','--print',dest='pr',action='store_true',default=False, help="print over/under frame data to console window")
 	parser.add_argument('-q','--quiet',dest='q',action='store_true',default=False, help="hide ffmpeg output from console window")
 	args = parser.parse_args()
 	
 	
 	######Initialize values from the Config Parser
 	profile = {} #init a dictionary where we'll store reference values from our config file
-	if args.uc is not None:
+	if args.p is not None:
 		config = ConfigParser.ConfigParser()
 		dn, fn = os.path.split(os.path.abspath(__file__)) #grip the dir where ~this script~ is located, also where config.txt should be located
 		config.read(os.path.join(dn,"qct-parse_config.txt"))
-		template = args.uc
+		template = args.p
 		#don't have an underFinder function yet lol
 		#profile['YMIN'] = config.get(template,'y_min')
 		profile['YMAX'] = config.get(template,'y_max')
@@ -277,7 +275,7 @@ def main():
 	
 	
 	#do some maths for the printout
-	if args.o or args.uc is not None:
+	if args.o or args.p is not None:
 		printresults(kover,frameCount)
 	
 	return
