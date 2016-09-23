@@ -3,7 +3,8 @@
 #see this link for lxml goodness: http://www.ibm.com/developerworks/xml/library/x-hiperfparse/
 
 from lxml import etree  #for reading XML file (you will need to install this with pip)
-import argparse         #for parsing input args (Which there are a lot of now lol)
+import argparse         #for parsing input args
+import ConfigParser		#grip frame data values from a config txt file
 import gzip             #for opening gzip file
 import logging          #for logging output
 import collections      #for circular buffer
@@ -26,75 +27,51 @@ def dependencies():
 
 #Creates timestamp for pkt_dts_time
 def dts2ts(frame_pkt_dts_time):
-    
     seconds = float(frame_pkt_dts_time)
     hours, seconds = divmod(seconds, 3600)
     minutes, seconds = divmod(seconds, 60)
-    
     if hours < 10:
         hours = "0" + str(int(hours))
     else:
-        hours = str(int(hours))
-        
+        hours = str(int(hours))  
     if minutes < 10:
         minutes = "0" + str(int(minutes))
     else:
         minutes = str(int(minutes))
-    
     secondsStr = str(round(seconds,4))
-    
     if int(seconds) < 10:
         secondsStr = "0" + secondsStr
     else:
         seconds = str(minutes)
     while len(secondsStr) < 7:
         secondsStr = secondsStr + "0"
-   
     timeStampString = hours + ":" + minutes + ":" + secondsStr
     return timeStampString
 
-#Initializes the log
+#initializes the log
 def initLog(inputPath):
 	logPath = inputPath + '.log'
 	logging.basicConfig(filename=logPath,level=logging.INFO,format='%(asctime)s %(message)s')
 	logging.info("Started QCT-Parse")
 	
-#Finds Overs
-def overFinder(inFrame,args,startObj,thumbPath,thumbDelay):
-	####init some variables using the args list
-	inputVid = startObj.replace(".qctools.xml.gz", "")
-	baseName = os.path.basename(startObj)
-	baseName = baseName.replace(".qctools.xml.gz", "")
-	tagValue = int(inFrame[args.t])
-
-	####czech for overs
+#finds overs
+def overFinder(inFrame,args,startObj,tag,thumbPath,thumbDelay):
+	print "in overfinder"
+	tagValue = float(inFrame[tag])
 	frame_pkt_dts_time = inFrame['pkt_dts_time']
-	if tagValue > int(args.o): #if the attribute is over usr set threshold
+	if tagValue > float(args.o): #if the attribute is over usr set threshold
 		timeStampString = dts2ts(frame_pkt_dts_time)
 		logging.warning(args.t + " is over " + args.o + " with a value of " + str(tagValue) + " at duration " + timeStampString)
-		outputFramePath = os.path.join(thumbPath,baseName + "." + args.t + "." + str(tagValue) + "." + timeStampString + ".png")
-		ffoutputFramePath = outputFramePath.replace(":",".")
-		
-		#for windows we gotta see if that first : for the drive has been replaced by a dot and put it back
-		match = ''
-		match = re.search(r"[A-Z]\.\/",ffoutputFramePath) #matches pattern R./ which should be R:/ on windows
-		if match:
-			ffoutputFramePath = ffoutputFramePath.replace(".",":",1) #replace first instance of "." in string ffoutputFramePath
-		
-		#ok do the thing
 		if args.te and (thumbDelay > int(args.ted)): #if thumb export is turned on and there has been enough delay between this frame and the last exported thumb, then export a new thumb
-			ffmpegString = "ffmpeg -ss " + timeStampString + " -i " + inputVid +  " -vframes 1 -y " + ffoutputFramePath
-			output = subprocess.Popen(ffmpegString,stdout=subprocess.PIPE,stderr=subprocess.PIPE) #,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True
-			out,err = output.communicate()
-			if args.q is True:
-				print out
-				print err
-			thumbDelay = 0 	
+			printThumb(args,startObj,thumbPath,baseName,tagValue,timeStampString,inputVid)
+			thumbDelay = 0
 		return 1, thumbDelay #return 1 because it was over and thumbDelay
 	return 0, thumbDelay #return 1 because it was NOT over and thumbDelay
 
+#detects bars	
 def detectBars(args,startObj,durationStart,durationEnd,framesList,buffSize):
-	with gzip.open(startObj) as xml:	
+	with gzip.open(startObj) as xml:
+		print "in detectbars"
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): #iterparse the xml doc
 			if elem.attrib['media_type'] == "video": #get just the video frames
 				frame_pkt_dts_time = elem.attrib['pkt_dts_time'] #get the timestamps for the current frame we're looking at
@@ -120,8 +97,9 @@ def detectBars(args,startObj,durationStart,durationEnd,framesList,buffSize):
 			elem.clear() #we're done with that element so let's get it outta memory
 	return
 
-def analyzeIt(args,startObj,durationStart,durationEnd,thumbPath,thumbDelay,framesList,count=0,overcount=0):
+def analyzeIt(args,profile,startObj,durationStart,durationEnd,thumbPath,thumbDelay,framesList,count=0,overcount=0):
 	with gzip.open(startObj) as xml:	
+		print "in analyzeit"
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): #iterparse the xml doc
 			if elem.attrib['media_type'] == "video": #get just the video frames
 				frame_pkt_dts_time = elem.attrib['pkt_dts_time'] #get the timestamps for the current frame we're looking at
@@ -145,14 +123,37 @@ def analyzeIt(args,startObj,durationStart,durationEnd,thumbPath,thumbDelay,frame
 					#Now we can parse the frame data from the buffer!	
 					#use the overFinder() function to find overs
 					frameOver = 0
-					if args.o:
-						frameOver, thumbDelay = overFinder(framesList[-1],args,startObj,thumbPath,thumbDelay)
+					if args.o or args.uc is not None:
+						tag = args.t
+						frameOver, thumbDelay = overFinder(framesList[-1],args,startObj,tag,thumbPath,thumbDelay)
 						if frameOver == 1:
 							overcount = overcount + 1
 					count = count + 1	
 					thumbDelay = thumbDelay + 1					
 			elem.clear() #we're done with that element so let's get it outta memory
 	return count, overcount
+
+def printThumb(args,startObj,thumbPath,baseName,tagValue,timeStampString,inputVid):
+	####init some variables using the args list
+	inputVid = startObj.replace(".qctools.xml.gz", "")
+	baseName = os.path.basename(startObj)
+	baseName = baseName.replace(".qctools.xml.gz", "")
+	outputFramePath = os.path.join(thumbPath,baseName + "." + args.t + "." + str(tagValue) + "." + timeStampString + ".png")
+	ffoutputFramePath = outputFramePath.replace(":",".")
+	
+	#for windows we gotta see if that first : for the drive has been replaced by a dot and put it back
+	match = ''
+	match = re.search(r"[A-Z]\.\/",ffoutputFramePath) #matches pattern R./ which should be R:/ on windows
+	if match:
+		ffoutputFramePath = ffoutputFramePath.replace(".",":",1) #replace first instance of "." in string ffoutputFramePath
+	
+	ffmpegString = "ffmpeg -ss " + timeStampString + " -i " + inputVid +  " -vframes 1 -y " + ffoutputFramePath
+	output = subprocess.Popen(ffmpegString,stdout=subprocess.PIPE,stderr=subprocess.PIPE) #,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True
+	out,err = output.communicate()
+	if args.q is True:
+		print out
+		print err
+	return
 	
 def printresults(count,overcount):
 	if count == 0:
@@ -177,6 +178,7 @@ def main():
 	parser.add_argument('-t','--tagname',dest='t', help="the tag name you want to test, e.g. SATMAX")
 	parser.add_argument('-o','--over',dest='o', help="the threshold overage number")
 	parser.add_argument('-u','--under',dest='u', help="the threshold under number")
+	parser.add_argument('-uc','--useconfig',dest='uc',default=None,help="use values from your qct-parse-config.txt file, provide profile/ template name, e.g. 'default'")
 	parser.add_argument('-buff','--buffSize',dest='buff',default=11, help="Size of the circular buffer. if user enters an even number it'll default to the next largest number to make it odd (default size 11)")
 	parser.add_argument('-te','--thumbExport',dest='te',action='store_true',default=False, help="export thumbnail")
 	parser.add_argument('-ted','--thumbExportDelay',dest='ted',default=9000, help="minimum frames between exported thumbs")
@@ -185,9 +187,26 @@ def main():
 	parser.add_argument('-de','--durationEnd',dest='de',default=99999999, help="the duration in seconds to stop analysis")
 	parser.add_argument('-bd','--barsDetection',dest='bd',action ='store_true',default=False, help="turns Bar Detection on and off")
 	parser.add_argument('-p','--print',dest='p',action='store_true',default=False, help="print over/under frame data to console window")
-	parser.add_argument('-q','--quiet',dest='q',action='store_true',default=False, help="print ffmpeg output to console window")
+	parser.add_argument('-q','--quiet',dest='q',action='store_true',default=False, help="hide ffmpeg output from console window")
 	args = parser.parse_args()
-
+	
+	######Initialize values from the Config Parser
+	if args.uc is not None:
+		config = ConfigParser.ConfigParser()
+		dn, fn = os.path.split(os.path.abspath(__file__)) #grip the dir where ~this script~ is located, also where config.txt should be located
+		config.read(os.path.join(dn,"qct-parse_config.txt"))
+		template = args.uc
+		profile = {} #init a dictionary where we'll store reference values from our config file
+		profile['YMIN'] = config.get(template,'y_min')
+		profile['YMAX'] = config.get(template,'y_max')
+		profile['UMIN'] = config.get(template,'u_min')
+		profile['UMAX'] = config.get(template,'u_max')
+		profile['VMIN'] = config.get(template,'v_min')
+		profile['VMAX'] = config.get(template,'v_max')
+		profile['SATMAX'] = config.get(template,'sat_max')
+		profile['TOUT'] = config.get(template,'tout_max')
+		profile['VREP'] = config.get(template,'vrep_max')
+		
 	######Initialize some other stuff######
 	startObj = args.i.replace("\\","/")
 	buffSize = int(args.buff)   #cast the input buffer as an integer
@@ -240,7 +259,7 @@ def main():
 	########Iterate Through the XML for General Analysis########
 	print "Starting Analysis on " + baseName
 	print ""
-	count, overcount = analyzeIt(args,startObj,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
+	count, overcount = analyzeIt(args,profile,startObj,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
 	
 	
 	print "Finished Processing File: " + baseName + ".qctools.xml.gz"
