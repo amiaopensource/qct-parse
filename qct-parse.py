@@ -54,18 +54,31 @@ def initLog(inputPath):
 	logging.basicConfig(filename=logPath,level=logging.INFO,format='%(asctime)s %(message)s')
 	logging.info("Started QCT-Parse")
 	
-#finds overs
-def overFinder(inFrame,args,startObj,tag,over,thumbPath,thumbDelay):
+#finds stuff over/under threshold
+def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay):
 	tagValue = float(inFrame[tag])
-	frame_pkt_dts_time = inFrame['pkt_dts_time']
-	if tagValue > float(over): #if the attribute is over usr set threshold
-		timeStampString = dts2ts(frame_pkt_dts_time)
-		logging.warning(tag + " is over " + str(over) + " with a value of " + str(tagValue) + " at duration " + timeStampString)
-		if args.te and (thumbDelay > int(args.ted)): #if thumb export is turned on and there has been enough delay between this frame and the last exported thumb, then export a new thumb
-			printThumb(args,startObj,thumbPath,tagValue,timeStampString)
-			thumbDelay = 0
-		return True, thumbDelay #return true because it was over and thumbDelay
-	return False, thumbDelay #return false because it was NOT over and thumbDelay
+	frame_pkt_dts_time = inFrame[pkt]
+	if "MIN" in tag:
+		under = over
+		if tagValue < float(under): #if the attribute is under usr set threshold
+			timeStampString = dts2ts(frame_pkt_dts_time)
+			logging.warning(tag + " is under " + str(under) + " with a value of " + str(tagValue) + " at duration " + timeStampString)
+			if args.te and (thumbDelay > int(args.ted)): #if thumb export is turned on and there has been enough delay between this frame and the last exported thumb, then export a new thumb
+				printThumb(args,startObj,thumbPath,tagValue,timeStampString)
+				thumbDelay = 0
+			return True, thumbDelay #return true because it was over and thumbDelay
+		else:
+			return False, thumbDelay #return false because it was NOT over and thumbDelay
+	else:
+		if tagValue > float(over): #if the attribute is over usr set threshold
+			timeStampString = dts2ts(frame_pkt_dts_time)
+			logging.warning(tag + " is over " + str(over) + " with a value of " + str(tagValue) + " at duration " + timeStampString)
+			if args.te and (thumbDelay > int(args.ted)): #if thumb export is turned on and there has been enough delay between this frame and the last exported thumb, then export a new thumb
+				printThumb(args,startObj,thumbPath,tagValue,timeStampString)
+				thumbDelay = 0
+			return True, thumbDelay #return true because it was over and thumbDelay
+		else:
+			return False, thumbDelay #return false because it was NOT over and thumbDelay
 
 #print thumbnail images of overs/unders	
 def printThumb(args,startObj,thumbPath,tagValue,timeStampString):
@@ -89,13 +102,13 @@ def printThumb(args,startObj,thumbPath,tagValue,timeStampString):
 	return	
 	
 #detect bars	
-def detectBars(args,startObj,durationStart,durationEnd,framesList,buffSize):
+def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 	with gzip.open(startObj) as xml:
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): #iterparse the xml doc
 			if elem.attrib['media_type'] == "video": #get just the video frames
-				frame_pkt_dts_time = elem.attrib['pkt_dts_time'] #get the timestamps for the current frame we're looking at
+				frame_pkt_dts_time = elem.attrib[pkt] #get the timestamps for the current frame we're looking at
 				frameDict = {}  #start an empty dict for the new frame
-				frameDict['pkt_dts_time'] = frame_pkt_dts_time  #give the dict the timestamp, which we have now
+				frameDict[pkt] = frame_pkt_dts_time  #give the dict the timestamp, which we have now
 				for t in list(elem):    #iterating through each attribute for each element
 					keySplit = t.attrib['key'].split(".")   #split the names by dots 
 					keyName = str(keySplit[-1])             #get just the last word for the key name
@@ -107,69 +120,69 @@ def detectBars(args,startObj,durationStart,durationEnd,framesList,buffSize):
 					bufferRange = range(0, buffSize)
 					if int(framesList[middleFrame]['YMAX']) > 210 and int(framesList[middleFrame]['YMIN']) < 10 and float(framesList[middleFrame]['YDIF']) < 3.0:
 						if durationStart == "":
-							durationStart = float(framesList[middleFrame]['pkt_dts_time'])
-							print "Bars start at " + str(framesList[middleFrame]['pkt_dts_time']) + " (" + dts2ts(framesList[middleFrame]['pkt_dts_time']) + ")"							
-						durationEnd = float(framesList[middleFrame]['pkt_dts_time'])
+							durationStart = float(framesList[middleFrame][pkt])
+							print "Bars start at " + str(framesList[middleFrame][pkt]) + " (" + dts2ts(framesList[middleFrame][pkt]) + ")"							
+						durationEnd = float(framesList[middleFrame][pkt])
 					else:
-						print "Bars ended at " + str(framesList[middleFrame]['pkt_dts_time']) + " (" + dts2ts(framesList[middleFrame]['pkt_dts_time']) + ")"							
+						print "Bars ended at " + str(framesList[middleFrame][pkt]) + " (" + dts2ts(framesList[middleFrame][pkt]) + ")"							
 						break
 			elem.clear() #we're done with that element so let's get it outta memory
 	return durationStart, durationEnd
 
-def analyzeIt(args,profile,startObj,durationStart,durationEnd,thumbPath,thumbDelay,framesList,frameCount=0):
-	kover = {} #init a dict for each key which we'll use to track how often a given key is over
+def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,frameCount=0):
+	kbeyond = {} #init a dict for each key which we'll use to track how often a given key is over
 	for k,v in profile.iteritems(): 
-		kover[k] = 0
+		kbeyond[k] = 0
 	with gzip.open(startObj) as xml:	
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): #iterparse the xml doc
 			if elem.attrib['media_type'] == "video": #get just the video frames
 				frameCount = frameCount + 1
-				frame_pkt_dts_time = elem.attrib['pkt_dts_time'] #get the timestamps for the current frame we're looking at
+				frame_pkt_dts_time = elem.attrib[pkt] #get the timestamps for the current frame we're looking at
 				if float(frame_pkt_dts_time) >= durationStart:	#only work on frames that are after the start time
 					if float(frame_pkt_dts_time) > durationEnd:	#only work on frames that are before the end time
 						print "started at " + str(durationStart) + " seconds and stopped at " + str(frame_pkt_dts_time) + " seconds (" + dts2ts(frame_pkt_dts_time) + ") or " + str(frameCount) + " frames!"
 						break
 					frameDict = {}  								#start an empty dict for the new frame
-					frameDict['pkt_dts_time'] = frame_pkt_dts_time  #make a key for the timestamp, which we have now
+					frameDict[pkt] = frame_pkt_dts_time  #make a key for the timestamp, which we have now
 					for t in list(elem):    						#iterating through each attribute for each element
 						keySplit = t.attrib['key'].split(".")   	#split the names by dots 
 						keyName = str(keySplit[-1])             	#get just the last word for the key name
 						frameDict[keyName] = t.attrib['value']		#add each attribute to the frame dictionary
 					framesList.append(frameDict)					#add this dict to our circular buffer
 					if args.pr is True:	#display "timestamp: Tag Value" (654.754100: YMAX 229) to the terminal window
-						print framesList[-1]['pkt_dts_time'] + ": " + args.t + " " + framesList[-1][args.t]
+						print framesList[-1][pkt] + ": " + args.t + " " + framesList[-1][args.t]
 					#Now we can parse the frame data from the buffer!	
 					if args.o and args.p is None: #if we're just doing a single tag
 						tag = args.t
 						over = float(args.o)
-						frameOver, thumbDelay = overFinder(framesList[-1],args,startObj,tag,over,thumbPath,thumbDelay)
+						frameOver, thumbDelay = threshFinder(framesList[-1],args,startObj,pkt,tag,over,thumbPath,thumbDelay)
 						if frameOver is True:
-							kover[tag] = kover[tag] + 1 #note the over in the keyover dictionary
+							kbeyond[tag] = kbeyond[tag] + 1 #note the over in the keyover dictionary
 					elif args.p is not None: #if we're using a profile
 						for k,v in profile.iteritems():
 							tag = k
 							over = float(v)
-							frameOver, thumbDelay = overFinder(framesList[-1],args,startObj,tag,over,thumbPath,thumbDelay)
+							frameOver, thumbDelay = threshFinder(framesList[-1],args,startObj,pkt,tag,over,thumbPath,thumbDelay)
 							if frameOver is True:
-								kover[k] = kover[k] + 1 #note the over in the key over dict
+								kbeyond[k] = kbeyond[k] + 1 #note the over in the key over dict
 					thumbDelay = thumbDelay + 1					
 			elem.clear() #we're done with that element so let's get it outta memory
-	return kover, frameCount
+	return kbeyond, frameCount
 
 
 	
-def printresults(kover,frameCount):
+def printresults(kbeyond,frameCount):
 	if frameCount == 0:
 		percentOverString = "0"
 	else:
-		for k,v in kover.iteritems():
-			percentOver = float(kover[k]) / float(frameCount)
+		for k,v in kbeyond.iteritems():
+			percentOver = float(kbeyond[k]) / float(frameCount)
 			if percentOver == 1:
 				percentOverString = "100"
 			else:
 				percentOverString = str(percentOver)
 				percentOverString = percentOverString[2:4] + "." + percentOverString[4:]
-				print "Number of frames over threshold for key " + k + " = " + str(kover[k])
+				print "Number of frames beyond threshold for key " + k + " = " + str(kbeyond[k])
 				print "Which is " + percentOverString + "% of the total # of frames"
 				#print "##############################################################"
 				print ""
@@ -202,12 +215,11 @@ def main():
 		dn, fn = os.path.split(os.path.abspath(__file__)) #grip the dir where ~this script~ is located, also where config.txt should be located
 		config.read(os.path.join(dn,"qct-parse_config.txt"))
 		template = args.p
-		#don't have an underFinder function yet lol
-		#profile['YMIN'] = config.get(template,'y_min')
+		profile['YMIN'] = config.get(template,'y_min')
 		profile['YMAX'] = config.get(template,'y_max')
-		#profile['UMIN'] = config.get(template,'u_min')
+		profile['UMIN'] = config.get(template,'u_min')
 		profile['UMAX'] = config.get(template,'u_max')
-		#profile['VMIN'] = config.get(template,'v_min')
+		profile['VMIN'] = config.get(template,'v_min')
 		profile['VMAX'] = config.get(template,'v_max')
 		profile['SATMAX'] = config.get(template,'sat_max')
 		profile['TOUT'] = config.get(template,'tout_max')
@@ -232,7 +244,18 @@ def main():
 	durationStart = args.ds
 	durationEnd = args.de
 
-	
+	#we gotta find out if the qctools report has pkt_dts_time or pkt_pts_time ugh
+	with gzip.open(startObj) as xml:	
+		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): #iterparse the xml doc
+			if elem.attrib['media_type'] == "video": #get just the video frames
+				#we gotta find out if the qctools report has pkt_dts_time or pkt_pts_time ugh
+				match = ''
+				match = re.search(r"pkt_.ts_time",etree.tostring(elem))
+				if match:
+						print "yes"
+						pkt = match.group()
+						break
+
 	#set the start and end duration times
 	if args.bd:
 		durationStart = ""				#if bar detection is turned on then we have to calculate this
@@ -261,13 +284,13 @@ def main():
 	if args.bd:
 		print "Starting Bars Detection on " + baseName
 		print ""
-		durationStart,durationEnd = detectBars(args,startObj,durationStart,durationEnd,framesList,buffSize)
+		durationStart,durationEnd = detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,)
 	
 
 	########Iterate Through the XML for General Analysis########
 	print "Starting Analysis on " + baseName
 	print ""
-	kover, frameCount = analyzeIt(args,profile,startObj,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
+	kbeyond, frameCount = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
 	
 	
 	print "Finished Processing File: " + baseName + ".qctools.xml.gz"
@@ -276,7 +299,7 @@ def main():
 	
 	#do some maths for the printout
 	if args.o or args.p is not None:
-		printresults(kover,frameCount)
+		printresults(kbeyond,frameCount)
 	
 	return
 
