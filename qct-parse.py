@@ -129,8 +129,9 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 			elem.clear() #we're done with that element so let's get it outta memory
 	return durationStart, durationEnd
 
-def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,frameCount=0):
+def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,frameCount=0,overallFrameFail=0):
 	kbeyond = {} #init a dict for each key which we'll use to track how often a given key is over
+	fots = ""
 	for k,v in profile.iteritems(): 
 		kbeyond[k] = 0
 	with gzip.open(startObj) as xml:	
@@ -165,27 +166,38 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 							frameOver, thumbDelay = threshFinder(framesList[-1],args,startObj,pkt,tag,over,thumbPath,thumbDelay)
 							if frameOver is True:
 								kbeyond[k] = kbeyond[k] + 1 #note the over in the key over dict
-					thumbDelay = thumbDelay + 1					
+								if not frame_pkt_dts_time in fots:
+									overallFrameFail = overallFrameFail + 1
+									fots = frame_pkt_dts_time
+					thumbDelay = thumbDelay + 1				
 			elem.clear() #we're done with that element so let's get it outta memory
-	return kbeyond, frameCount
+	return kbeyond, frameCount, overallFrameFail
 
 
 	
-def printresults(kbeyond,frameCount):
+def printresults(kbeyond,frameCount,overallFrameFail):
 	if frameCount == 0:
 		percentOverString = "0"
 	else:
+		print "Number of frames beyond threshold for:"
+		print ""
 		for k,v in kbeyond.iteritems():
 			percentOver = float(kbeyond[k]) / float(frameCount)
+			percentOverall = float(overallFrameFail) / float(frameCount)
 			if percentOver == 1:
 				percentOverString = "100"
 			else:
 				percentOverString = str(percentOver)
 				percentOverString = percentOverString[2:4] + "." + percentOverString[4:]
-				print "Number of frames beyond threshold for key " + k + " = " + str(kbeyond[k])
-				print "Which is " + percentOverString + "% of the total # of frames"
+				percentOverallString = str(percentOverall)
+				percentOverallString = percentOverallString[2:4] + "." + percentOverallString[4:6]
+				print  k + ":\t" + str(kbeyond[k])
+				print "\t" + percentOverString[:5] + "% of the total # of frames"
 				#print "##############################################################"
 				print ""
+		print "Overall:"
+		print "FramesWith1Fail:\t" + str(overallFrameFail)
+		print "\t\t\t" + str(percentOverallString)
 	return
 	
 def main():
@@ -252,7 +264,6 @@ def main():
 				match = ''
 				match = re.search(r"pkt_.ts_time",etree.tostring(elem))
 				if match:
-						print "yes"
 						pkt = match.group()
 						break
 
@@ -290,7 +301,7 @@ def main():
 	########Iterate Through the XML for General Analysis########
 	print "Starting Analysis on " + baseName
 	print ""
-	kbeyond, frameCount = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
+	kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
 	
 	
 	print "Finished Processing File: " + baseName + ".qctools.xml.gz"
@@ -299,7 +310,7 @@ def main():
 	
 	#do some maths for the printout
 	if args.o or args.p is not None:
-		printresults(kbeyond,frameCount)
+		printresults(kbeyond,frameCount,overallFrameFail)
 	
 	return
 
