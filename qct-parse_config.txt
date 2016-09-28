@@ -9,7 +9,6 @@ VHIGH: 255
 SATMAX: 181.02
 TOUT: 0.009
 VREP: 0.03
-mse_y: 1.0
 
 #Higher Tolerance for Peaking
 [highTolerance]

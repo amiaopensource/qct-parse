@@ -162,6 +162,7 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 					if args.o and args.p is None: #if we're just doing a single tag
 						tag = args.t
 						over = float(args.o)
+						#ACTAULLY DO THE THING ONCE FOR EACH TAG
 						frameOver, thumbDelay = threshFinder(framesList[-1],args,startObj,pkt,tag,over,thumbPath,thumbDelay)
 						if frameOver is True:
 							kbeyond[tag] = kbeyond[tag] + 1 #note the over in the keyover dictionary
@@ -169,12 +170,13 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 						for k,v in profile.iteritems():
 							tag = k
 							over = float(v)
+							#ACTUALLY DO THE THING ONCE FOR EACH TAG
 							frameOver, thumbDelay = threshFinder(framesList[-1],args,startObj,pkt,tag,over,thumbPath,thumbDelay)
 							if frameOver is True:
 								kbeyond[k] = kbeyond[k] + 1 #note the over in the key over dict
-								if not frame_pkt_dts_time in fots:
+								if not frame_pkt_dts_time in fots: #make sure that we only count each over frame once
 									overallFrameFail = overallFrameFail + 1
-									fots = frame_pkt_dts_time
+									fots = frame_pkt_dts_time #set it again so we don't dupe
 					thumbDelay = thumbDelay + 1				
 			elem.clear() #we're done with that element so let's get it outta memory
 	return kbeyond, frameCount, overallFrameFail
@@ -223,7 +225,6 @@ def printresults(kbeyond,frameCount,overallFrameFail):
 				else:
 					percentOverString = percentOverString[:5]
 			print  k + ":\t" + str(kbeyond[k]) + "\t" + percentOverString + "\t% of the total # of frames"
-			#print "##############################################################"
 			print ""
 		print "Overall:"
 		print ""
@@ -277,7 +278,7 @@ def main():
 	count = 0		#init total frames counter
 	framesList = collections.deque(maxlen=buffSize)		#init holding object for holding all frame data in a circular buffer. 
 	bdFramesList = collections.deque(maxlen=buffSize) 	#init holding object for holding all frame data in a circular buffer. 
-	thumbDelay = int(args.ted)	
+	thumbDelay = int(args.ted)	#get a seconds number for the delay in the original file btw exporting tags
 	parentDir = os.path.dirname(startObj)
 	baseName = os.path.basename(startObj)
 	baseName = baseName.replace(".qctools.xml.gz", "")
