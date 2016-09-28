@@ -251,22 +251,21 @@ def main():
 	
 	######Initialize values from the Config Parser
 	profile = {} #init a dictionary where we'll store reference values from our config file
+	tagList = ["YMIN","YLOW","YAVG","YHIGH","YMAX","UMIN","ULOW","UAVG","UHIGH","UMAX","VMIN","VLOW","VAVG","VHIGH","VMAX","SATMIN","SATLOW","SATAVG","SATHIGH","SATMAX","HUEMED","HUEAVG","YDIF","UDIF","VDIF","TOUT","VREP","BRNG","mse_y","mse_u","mse_v","mse_avg","psnr_y","psnr_u","psnr_v","psnr_avg"]
 	if args.p is not None:
-		config = ConfigParser.ConfigParser()
+		config = ConfigParser.RawConfigParser(allow_no_value=True)
 		dn, fn = os.path.split(os.path.abspath(__file__)) #grip the dir where ~this script~ is located, also where config.txt should be located
 		config.read(os.path.join(dn,"qct-parse_config.txt"))
 		template = args.p
-		profile['YLOW'] = config.get(template,'y_low')
-		profile['YMAX'] = config.get(template,'y_max')
-		profile['UMIN'] = config.get(template,'u_min')
-		profile['UMAX'] = config.get(template,'u_max')
-		profile['VMIN'] = config.get(template,'v_min')
-		profile['VMAX'] = config.get(template,'v_max')
-		profile['SATMAX'] = config.get(template,'sat_max')
-		profile['TOUT'] = config.get(template,'tout_max')
-		profile['VREP'] = config.get(template,'vrep_max')
-	
-	
+		for t in tagList:
+			try:
+				print t
+				profile[t] = config.get(template,t)
+				print profile[t]
+			except:
+				pass
+	print profile
+	foo = raw_input("eh")
 	######Initialize some other stuff######
 	startObj = args.i.replace("\\","/")
 	buffSize = int(args.buff)   #cast the input buffer as an integer

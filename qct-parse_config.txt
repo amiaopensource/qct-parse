@@ -1,47 +1,85 @@
 #based on qctools docs
 [default]
-y_low: 16
-y_max: 235
-u_min: 16
-u_max: 235
-v_min: 0
-v_max: 255
-sat_max: 181.02
-tout_max: 0.009
-vrep_max: 0.03
+YLOW: 16
+YHIGH: 235
+ULOW: 16
+UHIGH: 235
+VLOW: 0
+VHIGH: 255
+SATMAX: 181.02
+TOUT: 0.009
+VREP: 0.03
 
 #Higher Tolerance for Peaking
 [highTolerance]
-y_low: 10
-y_max: 250
-u_min: 16
-u_max: 250
-v_min: 0
-v_max: 255
-sat_max: 181.02
-tout_max: 0.009
-vrep_max: 0.03
+YLOW: 10
+YMAX: 250
+UMIN: 16
+UMAX: 250
+VMIN: 0
+VMAX: 255
+SATMAX: 181.02
+TOUT: 0.009
+VREP: 0.03
 
-#Higher Tolerance for Peaking
+#Medium Tolerance for Peaking
 [midTolerance]
-y_low: 10
-y_max: 245
-u_min: 16
-u_max: 245
-v_min: 0
-v_max: 255
-sat_max: 181.02
-tout_max: 0.009
-vrep_max: 0.03
+YLOW: 10
+YMAX: 245
+UMIN: 16
+UMAX: 245
+VMIN: 0
+VMAX: 255
+SATMAX: 181.02
+TOUT: 0.009
+VREP: 0.03
 
-#Higher Tolerance for Peaking
+#Low Tolerance for Peaking
 [lowTolerance]
-y_low: 16
-y_max: 235
-u_min: 16
-u_max: 235
-v_min: 0
-v_max: 255
-sat_max: 181.02
-tout_max: 0.009
-vrep_max: 0.03
+YLOW: 16
+YMAX: 235
+UMIN: 16
+UMAX: 235
+VMIN: 0
+VMAX: 255
+SATMAX: 181.02
+TOUT: 0.009
+VREP: 0.03
+
+[fullTagList]
+YMIN:
+YLOW:
+YAVG:
+YHIGH
+YMAX:
+UMIN:
+ULOW:
+UAVG:
+UHIGH:
+UMAX:
+VMIN:
+VLOW:
+VAVG:
+VHIGH:
+VMAX:
+SATMIN:
+SATLOW:
+SATAVG:
+SATHIGH:
+SATMAX:
+HUEMED:
+HUEAVG:
+YDIF:
+UDIF:
+VDIF:
+TOUT:
+VREP:
+BRNG:
+mse_y:
+mse_u:
+mse_v:
+mse_avg:
+psnr_y:
+psnr_u:
+psnr_v:
+psnr_avg:
