@@ -152,6 +152,8 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 					for t in list(elem):    						#iterating through each attribute for each element
 						keySplit = t.attrib['key'].split(".")   	#split the names by dots 
 						keyName = str(keySplit[-1])             	#get just the last word for the key name
+						if len(keyName) == 1:						#if it's psnr or mse, keyName is gonna be a single char
+							keyName = '.'.join(keySplit[-2:])		#full attribute made by combining last 2 parts of split with a period in btw
 						frameDict[keyName] = t.attrib['value']		#add each attribute to the frame dictionary
 					framesList.append(frameDict)					#add this dict to our circular buffer
 					if args.pr is True:	#display "timestamp: Tag Value" (654.754100: YMAX 229) to the terminal window
@@ -251,21 +253,19 @@ def main():
 	
 	######Initialize values from the Config Parser
 	profile = {} #init a dictionary where we'll store reference values from our config file
+	#init a list of every tag available in a QCTools Report
 	tagList = ["YMIN","YLOW","YAVG","YHIGH","YMAX","UMIN","ULOW","UAVG","UHIGH","UMAX","VMIN","VLOW","VAVG","VHIGH","VMAX","SATMIN","SATLOW","SATAVG","SATHIGH","SATMAX","HUEMED","HUEAVG","YDIF","UDIF","VDIF","TOUT","VREP","BRNG","mse_y","mse_u","mse_v","mse_avg","psnr_y","psnr_u","psnr_v","psnr_avg"]
 	if args.p is not None:
 		config = ConfigParser.RawConfigParser(allow_no_value=True)
 		dn, fn = os.path.split(os.path.abspath(__file__)) #grip the dir where ~this script~ is located, also where config.txt should be located
-		config.read(os.path.join(dn,"qct-parse_config.txt"))
-		template = args.p
-		for t in tagList:
-			try:
-				print t
-				profile[t] = config.get(template,t)
-				print profile[t]
-			except:
+		config.read(os.path.join(dn,"qct-parse_config.txt")) #read in the config file
+		template = args.p #get the profile/ section name from CLI
+		for t in tagList: 			#loop thru every tag available and 
+			try: 					#see if it's in the config section
+				profile[t.replace("_",".")] = config.get(template,t) #if it is, replace _ necessary for config file with . which xml attributes use, assign the value in config
+			except: #if no config tag exists, do nothing so we can move faster
 				pass
-	print profile
-	foo = raw_input("eh")
+	
 	######Initialize some other stuff######
 	startObj = args.i.replace("\\","/")
 	buffSize = int(args.buff)   #cast the input buffer as an integer
