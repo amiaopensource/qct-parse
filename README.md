@@ -31,3 +31,18 @@ scripts for parsing qctools reports
   -pr, --print               | print over/under frame data to console window, default off
   
   -q, --quiet               | print ffmpeg output to console window, default off
+
+
+##examples
+
+###single tags
+
+python qct-parse.py -t SATMAX -o 235 -t YMIN -u 16 -i /path/to/report.mkv.qctools.xml.gz
+
+###run bars against default profile from QCTools docs
+
+python qct-parse.py -bd -p default -i /path/to/reportsmkv.qctools.xml.gz
+
+###print out thumbnails of frames beyond threshold
+
+python qct-parse.py -p default -te -tep C:\path\to\export\folder -i C:\path\to\the\report.mkv.qctools.xml.gz
