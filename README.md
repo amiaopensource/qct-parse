@@ -52,3 +52,14 @@ python qct-parse.py -p default -te -tep C:\path\to\export\folder -i C:\path\to\t
 Python 2.7.x.
 
 Requires that [lxml](http://lxml.de/) is installed on your system. For more info on how it's used, see [here](http://www.ibm.com/developerworks/library/x-hiperfparse/)
+
+
+##credits
+
+@CoatesBrendan
+
+@av_morgan
+
+with George Blood LLC
+
+and UCSB Special Research Collections
