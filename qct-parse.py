@@ -1,4 +1,5 @@
-#qct-parse3.2 -> fixed bugs in 3.1
+#!/usr/bin/env python
+#qct-parse 0.9
 
 #see this link for lxml goodness: http://www.ibm.com/developerworks/xml/library/x-hiperfparse/
 
@@ -58,13 +59,13 @@ def initLog(inputPath):
 def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay):
 	tagValue = float(inFrame[tag])
 	frame_pkt_dts_time = inFrame[pkt]
-	if "MIN" in tag:
+	if "MIN" in tag or "LOW" in tag:
 		under = over
 		if tagValue < float(under): #if the attribute is under usr set threshold
 			timeStampString = dts2ts(frame_pkt_dts_time)
 			logging.warning(tag + " is under " + str(under) + " with a value of " + str(tagValue) + " at duration " + timeStampString)
 			if args.te and (thumbDelay > int(args.ted)): #if thumb export is turned on and there has been enough delay between this frame and the last exported thumb, then export a new thumb
-				printThumb(args,startObj,thumbPath,tagValue,timeStampString)
+				printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString)
 				thumbDelay = 0
 			return True, thumbDelay #return true because it was over and thumbDelay
 		else:
@@ -74,27 +75,27 @@ def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay):
 			timeStampString = dts2ts(frame_pkt_dts_time)
 			logging.warning(tag + " is over " + str(over) + " with a value of " + str(tagValue) + " at duration " + timeStampString)
 			if args.te and (thumbDelay > int(args.ted)): #if thumb export is turned on and there has been enough delay between this frame and the last exported thumb, then export a new thumb
-				printThumb(args,startObj,thumbPath,tagValue,timeStampString)
+				printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString)
 				thumbDelay = 0
 			return True, thumbDelay #return true because it was over and thumbDelay
 		else:
 			return False, thumbDelay #return false because it was NOT over and thumbDelay
 
 #print thumbnail images of overs/unders	
-def printThumb(args,startObj,thumbPath,tagValue,timeStampString):
+def printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString):
 	####init some variables using the args list
 	inputVid = startObj.replace(".qctools.xml.gz", "")
 	baseName = os.path.basename(startObj)
 	baseName = baseName.replace(".qctools.xml.gz", "")
-	outputFramePath = os.path.join(thumbPath,baseName + "." + args.t + "." + str(tagValue) + "." + timeStampString + ".png")
+	outputFramePath = os.path.join(thumbPath,baseName + "." + tag + "." + str(tagValue) + "." + timeStampString + ".png")
 	ffoutputFramePath = outputFramePath.replace(":",".")
 	#for windows we gotta see if that first : for the drive has been replaced by a dot and put it back
 	match = ''
 	match = re.search(r"[A-Z]\.\/",ffoutputFramePath) #matches pattern R./ which should be R:/ on windows
 	if match:
 		ffoutputFramePath = ffoutputFramePath.replace(".",":",1) #replace first instance of "." in string ffoutputFramePath
-	ffmpegString = "ffmpeg -ss " + timeStampString + " -i " + inputVid +  " -vframes 1 -y " + ffoutputFramePath
-	output = subprocess.Popen(ffmpegString,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+	ffmpegString = "ffmpeg -ss " + timeStampString + " -i '" + inputVid +  "' -vframes 1 -s 720x486 -y '" + ffoutputFramePath + "'" #Hardcoded output frame size to 720x486 for now, need to infer from input eventually
+	output = subprocess.Popen(ffmpegString,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
 	out,err = output.communicate()
 	if args.q is False:
 		print out
@@ -132,8 +133,11 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,frameCount=0,overallFrameFail=0):
 	kbeyond = {} #init a dict for each key which we'll use to track how often a given key is over
 	fots = ""
-	for k,v in profile.iteritems(): 
-		kbeyond[k] = 0
+	if args.t:
+		kbeyond[args.t] = 0 
+	else:
+		for k,v in profile.iteritems(): 
+			kbeyond[k] = 0
 	with gzip.open(startObj) as xml:	
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): #iterparse the xml doc
 			if elem.attrib['media_type'] == "video": #get just the video frames
@@ -174,30 +178,55 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 	return kbeyond, frameCount, overallFrameFail
 
 
-	
+#This function is admittedly very ugly, but what it puts out is very pretty. Need to revamp 	
 def printresults(kbeyond,frameCount,overallFrameFail):
 	if frameCount == 0:
 		percentOverString = "0"
 	else:
 		print "Number of frames beyond threshold for:"
 		print ""
+		print "TotalFrames:\t" + str(frameCount)
+		print ""
+		print "By Tag:"
+		print ""
+		percentOverall = float(overallFrameFail) / float(frameCount)
+		if percentOverall == 1:
+			percentOverallString = "100"
+		elif percentOverall == 0:
+			percentOverallString = "0"
+		elif percentOverall < 0.0001:
+			percentOverallString = "<0.01"
+		else:
+			percentOverallString = str(percentOverall)
+			percentOverallString = percentOverallString[2:4] + "." + percentOverallString[4:]
+			if percentOverallString[0] == "0":
+				percentOverallString = percentOverallString[1:]
+				percentOverallString = percentOverallString[:4]
+			else:
+				percentOverallString = percentOverallString[:5]			
 		for k,v in kbeyond.iteritems():
 			percentOver = float(kbeyond[k]) / float(frameCount)
-			percentOverall = float(overallFrameFail) / float(frameCount)
 			if percentOver == 1:
 				percentOverString = "100"
+			elif percentOver == 0:
+				percentOverString = "0"
+			elif percentOver < 0.0001:
+				percentOverString = "<0.01"
 			else:
 				percentOverString = str(percentOver)
 				percentOverString = percentOverString[2:4] + "." + percentOverString[4:]
-				percentOverallString = str(percentOverall)
-				percentOverallString = percentOverallString[2:4] + "." + percentOverallString[4:6]
-				print  k + ":\t" + str(kbeyond[k])
-				print "\t" + percentOverString[:5] + "% of the total # of frames"
-				#print "##############################################################"
-				print ""
+				if percentOverString[0] == "0":
+					percentOverString = percentOverString[1:]
+					percentOverString = percentOverString[:4]
+				else:
+					percentOverString = percentOverString[:5]
+			print  k + ":\t" + str(kbeyond[k]) + "\t" + percentOverString + "\t% of the total # of frames"
+			#print "##############################################################"
+			print ""
 		print "Overall:"
-		print "FramesWith1Fail:\t" + str(overallFrameFail)
-		print "\t\t\t" + str(percentOverallString)
+		print ""
+		print "Frames With At Least One Fail:\t" + str(overallFrameFail) + "\t" + percentOverallString + "\t% of the total # of frames"
+		print ""
 	return
 	
 def main():
@@ -227,7 +256,7 @@ def main():
 		dn, fn = os.path.split(os.path.abspath(__file__)) #grip the dir where ~this script~ is located, also where config.txt should be located
 		config.read(os.path.join(dn,"qct-parse_config.txt"))
 		template = args.p
-		profile['YMIN'] = config.get(template,'y_min')
+		profile['YLOW'] = config.get(template,'y_low')
 		profile['YMAX'] = config.get(template,'y_max')
 		profile['UMIN'] = config.get(template,'u_min')
 		profile['UMAX'] = config.get(template,'u_max')
@@ -284,8 +313,10 @@ def main():
 	if args.tep:
 	    thumbPath = str(args.tep)
 	else:
-		thumbPath = os.path.join(parentDir, str(args.t) + "." + str(args.o))
-
+		if args.t:
+			thumbPath = os.path.join(parentDir, str(args.t) + "." + str(args.o))
+		else:
+			thumbPath = os.path.join(parentDir, "ThumbExports")
 	if args.te:
 		if not os.path.exists(thumbPath):
 			os.makedirs(thumbPath)
@@ -293,12 +324,14 @@ def main():
 	
 	########Iterate Through the XML for Bars detection########
 	if args.bd:
+		print ""
 		print "Starting Bars Detection on " + baseName
 		print ""
 		durationStart,durationEnd = detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,)
 	
 
 	########Iterate Through the XML for General Analysis########
+	print ""
 	print "Starting Analysis on " + baseName
 	print ""
 	kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
