@@ -46,3 +46,9 @@ python qct-parse.py -bd -p default -i /path/to/reportsmkv.qctools.xml.gz
 ###print out thumbnails of frames beyond threshold
 
 python qct-parse.py -p default -te -tep C:\path\to\export\folder -i C:\path\to\the\report.mkv.qctools.xml.gz
+
+##dependencies
+
+Python 2.7.x.
+
+Requires that [lxml](http://lxml.de/) is installed on your system. For more info on how it's used, see [here](http://www.ibm.com/developerworks/library/x-hiperfparse/)
