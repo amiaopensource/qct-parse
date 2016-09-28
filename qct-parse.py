@@ -94,7 +94,7 @@ def printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString):
 	match = re.search(r"[A-Z]\.\/",ffoutputFramePath) #matches pattern R./ which should be R:/ on windows
 	if match:
 		ffoutputFramePath = ffoutputFramePath.replace(".",":",1) #replace first instance of "." in string ffoutputFramePath
-	ffmpegString = "ffmpeg -ss " + timeStampString + " -i '" + inputVid +  "' -vframes 1 -s 720x486 -y '" + ffoutputFramePath + "'" #Hardcoded output frame size to 720x486 for now, need to infer from input eventually
+	ffmpegString = "ffmpeg -ss " + timeStampString + ' -i "' + inputVid +  '" -vframes 1 -s 720x486 -y "' + ffoutputFramePath + '"' #Hardcoded output frame size to 720x486 for now, need to infer from input eventually
 	output = subprocess.Popen(ffmpegString,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
 	out,err = output.communicate()
 	if args.q is False:
@@ -159,9 +159,12 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 					if args.pr is True:	#display "timestamp: Tag Value" (654.754100: YMAX 229) to the terminal window
 						print framesList[-1][pkt] + ": " + args.t + " " + framesList[-1][args.t]
 					#Now we can parse the frame data from the buffer!	
-					if args.o and args.p is None: #if we're just doing a single tag
+					if args.o or args.u and args.p is None: #if we're just doing a single tag
 						tag = args.t
-						over = float(args.o)
+						if args.o:
+							over = float(args.o)
+						if args.u:
+							over = float(args.u)
 						#ACTAULLY DO THE THING ONCE FOR EACH TAG
 						frameOver, thumbDelay = threshFinder(framesList[-1],args,startObj,pkt,tag,over,thumbPath,thumbDelay)
 						if frameOver is True:
@@ -310,14 +313,17 @@ def main():
 	if args.tep and not args.te:
 		print "Buddy, you specified a thumbnail export path without specifying that you wanted to export the thumbnails. Please either add '-te' to your cli call or delete '-tep [path]'"
 	
-	if args.tep:
+	if args.tep: #if user supplied thumbExportPath, use that
 	    thumbPath = str(args.tep)
 	else:
-		if args.t:
-			thumbPath = os.path.join(parentDir, str(args.t) + "." + str(args.o))
-		else:
+		if args.t: #if they supplied a single tag
+			if args.o: #if the supplied tag is looking for a threshold Over
+				thumbPath = os.path.join(parentDir, str(args.t) + "." + str(args.o))
+			elif args.u: #if the supplied tag was looking for a threshold Under
+				thumbPath = os.path.join(parentDir, str(args.t) + "." + str(args.u))
+		else: #if they're using a profile, put all thumbs in 1 dir
 			thumbPath = os.path.join(parentDir, "ThumbExports")
-	if args.te:
+	if args.te: #make the thumb export path if it doesn't already exist
 		if not os.path.exists(thumbPath):
 			os.makedirs(thumbPath)
 	
@@ -342,7 +348,7 @@ def main():
 	
 	
 	#do some maths for the printout
-	if args.o or args.p is not None:
+	if args.o or args.u or args.p is not None:
 		printresults(kbeyond,frameCount,overallFrameFail)
 	
 	return
