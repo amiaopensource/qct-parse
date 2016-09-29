@@ -1,5 +1,10 @@
-# qct-parse
-scripts for parsing qctools reports
+scripts for automating QCTools actions
+
+qct-parse.py | find frames that are beyond thresholds for saturation, luma, etc
+
+makeqctoolsreport.py | make a qctools.xml.gz report for input video file
+
+#qct-parse.py
 
 ##arguments
   -h, --help                | show this help message and exit
@@ -53,6 +58,11 @@ Python 2.7.x.
 
 Requires that [lxml](http://lxml.de/) is installed on your system. For more info on how it's used, see [here](http://www.ibm.com/developerworks/library/x-hiperfparse/)
 
+#makeqctoolsreport.py
+
+##example
+
+python makeqctoolsreport.py /path/to/input.mxf
 
 ##credits
 
