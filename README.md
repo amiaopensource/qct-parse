@@ -52,6 +52,16 @@ python qct-parse.py -bd -p default -i /path/to/reportsmkv.qctools.xml.gz
 
 python qct-parse.py -p default -te -tep C:\path\to\export\folder -i C:\path\to\the\report.mkv.qctools.xml.gz
 
+##some handy applescript to grep individual tags
+
+###just percentages
+
+python ./qct-parse.py -i input.mxf.qctools.xml.gz -bd -p lowTolerance | grep 'YMAX' | awk 'NR==1 {print $3}'
+
+###total number of frame failures
+
+python ./qct-parse.py -i input.mxf.qctools.xml.gz -bd -p lowTolerance | grep 'YMAX' | awk 'NR==1 {print $2}'
+
 ##dependencies
 
 Python 2.7.x.
