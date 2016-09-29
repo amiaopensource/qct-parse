@@ -59,7 +59,3 @@ Requires that [lxml](http://lxml.de/) is installed on your system. For more info
 @CoatesBrendan
 
 @av_morgan
-
-with George Blood LLC
-
-and UCSB Special Research Collections
