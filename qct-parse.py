@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#qct-parse 0.9
+#qct-parse 0.5.0
 
 #see this link for lxml goodness: http://www.ibm.com/developerworks/xml/library/x-hiperfparse/
 
@@ -232,6 +232,8 @@ def printresults(kbeyond,frameCount,overallFrameFail):
 		print "Overall:"
 		print ""
 		print "Frames With At Least One Fail:\t" + str(overallFrameFail) + "\t" + percentOverallString + "\t% of the total # of frames"
+		print ""
+		print "**************************"
 		print ""
 	return
 	
