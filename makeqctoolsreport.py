@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #makeqctoolsreport.py v 0.2.0
 
 import os
@@ -56,9 +57,16 @@ def parseInput():
 
 def transcode():
 	#transcode to .nut	
-	ffmpegstring = 'ffmpeg' + inputCodec + '-vsync 0 -i ' + startObj + ' -vcodec rawvideo -acodec pcm_s24le' + filterstring + '-f nut -y ' + startObj + '.temp1.nut'
+  
+	ffmpegstring = ['ffmpeg'] 
+	if not inputCodec == ' ':
+		ffmpegstring.append(inputCodec)
+	ffmpegstring.extend(['-vsync','0','-i',startObj,'-vcodec','rawvideo','-acodec','pcm_s24le'])
+	if not filterstring== ' ':
+		ffmpegstring.append(inputCodec)
+	ffmpegstring.extend(['-f','nut','-y',startObj + '%s' % '.temp1.nut'])
 	subprocess.call(ffmpegstring)
-	return
+	
 
 def makeReport():
 	#here's where we use ffprobe to make the qctools report in regular xml
