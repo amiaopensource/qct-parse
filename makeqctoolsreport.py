@@ -72,7 +72,7 @@ def makeReport():
 	#here's where we use ffprobe to make the qctools report in regular xml
 	print "writing ffprobe output to xml"
 	tmpxml = open(startObj + '.qctools.xml','w')
-	subprocess.call(['ffprobe','-loglevel','error','-f','lavfi','movie=' + startObj + '.temp1.nut:s=v+a[in0][in1],[in0]signalstats=stat=tout+vrep+brng,cropdetect=reset=1,split[a][b];[a]field=top[a1];[b]field=bottom[b1],[a1][b1]psnr[out0];[in1]ebur128=metadata=1[out1]','-show_frames','-show_versions','-of','xml=x=1:q=1','-noprivate'], stdout=tmpxml)
+	subprocess.call(['ffprobe','-loglevel','error','-f','lavfi','-i','movie=' + startObj + ':s=v+a[in0][in1],[in0]signalstats=stat=tout+vrep+brng,cropdetect=reset=1,split[a][b];[a]field=top[a1];[b]field=bottom[b1],[a1][b1]psnr[out0];[in1]ebur128=metadata=1[out1]','-show_frames','-show_versions','-of','xml=x=1:q=1','-noprivate'], stdout=tmpxml)
 	tmpxml.close()
 
 	#gzip that tmpxml file then delete the regular xml file cause we dont need it anymore
@@ -80,11 +80,14 @@ def makeReport():
 	with open(startObj + '.qctools.xml', 'rb') as f_in, gzip.open(startObj + '.qctools.xml.gz','wb') as f_out:
 		shutil.copyfileobj(f_in,f_out)
 	os.remove(startObj + '.qctools.xml')
-	os.remove(startObj + '.temp1.nut')
+	if os.path.exists(startObj + '.temp1.nut'):
+		os.remove(startObj + '.temp1.nut')
 
 
 dependencies()
 startObj = sys.argv[1]
 inputCodec, filterstring = parseInput()
-transcode()
+if 'jpeg' in inputCodec:
+	transcode()
+	startObj = startObj + ".temp1.nut"
 makeReport()
