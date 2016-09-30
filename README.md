@@ -70,6 +70,10 @@ Requires that [lxml](http://lxml.de/) is installed on your system. For more info
 
 #makeqctoolsreport.py
 
+python port of Morgan's [makeqctoolsreport.as](https://github.com/iamdamosuzuki/QCToolsReport)
+
+Mac users are encouraged to use that at this time
+
 ##example
 
 python makeqctoolsreport.py /path/to/input.mxf
