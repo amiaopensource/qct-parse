@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #makeqctoolsreport.py v 0.2.0
 
 import os
@@ -56,15 +57,33 @@ def parseInput():
 
 def transcode():
 	#transcode to .nut	
-	ffmpegstring = 'ffmpeg' + inputCodec + '-vsync 0 -i ' + startObj + ' -vcodec rawvideo -acodec pcm_s24le' + filterstring + '-f nut -y ' + startObj + '.temp1.nut'
+  
+	ffmpegstring = ['ffmpeg'] 
+	if not inputCodec == ' ':
+		ffmpegstring.append(inputCodec)
+	ffmpegstring.extend(['-vsync','0','-i',startObj,'-vcodec','rawvideo','-acodec','pcm_s24le'])
+	if not filterstring== ' ':
+		ffmpegstring.append(inputCodec)
+	ffmpegstring.extend(['-f','nut','-y',startObj + '%s' % '.temp1.nut'])
 	subprocess.call(ffmpegstring)
-	return
 
+	
+def get_audio_stream_count():
+	audio_stream_count = subprocess.check_output(['ffprobe', '-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=index','-of', 'flat', sys.argv[1]]).splitlines()
+	return len(audio_stream_count)
+	
+	
 def makeReport():
 	#here's where we use ffprobe to make the qctools report in regular xml
 	print "writing ffprobe output to xml"
+	audio_tracks = get_audio_stream_count()
+	if audio_tracks > 0:
+		ffprobe_command = ['ffprobe','-loglevel','error','-f','lavfi','-i','movie=' + startObj + ':s=v+a[in0][in1],[in0]signalstats=stat=tout+vrep+brng,cropdetect=reset=1,split[a][b];[a]field=top[a1];[b]field=bottom[b1],[a1][b1]psnr[out0];[in1]ebur128=metadata=1[out1]','-show_frames','-show_versions','-of','xml=x=1:q=1','-noprivate']
+	elif audio_tracks == 0:
+		ffprobe_command = ['ffprobe','-loglevel','error','-f','lavfi','-i','movie=' + startObj + ',signalstats=stat=tout+vrep+brng,cropdetect=reset=1,split[a][b];[a]field=top[a1];[b]field=bottom[b1],[a1][b1]psnr','-show_frames','-show_versions','-of','xml=x=1:q=1','-noprivate']
+	
 	tmpxml = open(startObj + '.qctools.xml','w')
-	subprocess.call(['ffprobe','-loglevel','error','-f','lavfi','movie=' + startObj + '.temp1.nut:s=v+a[in0][in1],[in0]signalstats=stat=tout+vrep+brng,cropdetect=reset=1,split[a][b];[a]field=top[a1];[b]field=bottom[b1],[a1][b1]psnr[out0];[in1]ebur128=metadata=1[out1]','-show_frames','-show_versions','-of','xml=x=1:q=1','-noprivate'], stdout=tmpxml)
+	subprocess.call(ffprobe_command, stdout=tmpxml)
 	tmpxml.close()
 
 	#gzip that tmpxml file then delete the regular xml file cause we dont need it anymore
@@ -72,12 +91,15 @@ def makeReport():
 	with open(startObj + '.qctools.xml', 'rb') as f_in, gzip.open(startObj + '.qctools.xml.gz','wb') as f_out:
 		shutil.copyfileobj(f_in,f_out)
 	os.remove(startObj + '.qctools.xml')
-	os.remove(startObj + '.temp1.nut')
+	if os.path.exists(startObj + '.temp1.nut'):
+		os.remove(startObj + '.temp1.nut')
 
 
 dependencies()
 startObj = sys.argv[1]
 startObj = startObj.replace("\\","/")
 inputCodec, filterstring = parseInput()
-transcode()
+if 'jpeg' in inputCodec:
+	transcode()
+	startObj = startObj + ".temp1.nut"
 makeReport()

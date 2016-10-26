@@ -1,5 +1,10 @@
-# qct-parse
-scripts for parsing qctools reports
+scripts for automating QCTools actions
+
+qct-parse.py | find frames that are beyond thresholds for saturation, luma, etc
+
+makeqctoolsreport.py | make a qctools.xml.gz report for input video file
+
+#qct-parse.py
 
 ##arguments
   -h, --help                | show this help message and exit
@@ -47,12 +52,31 @@ python qct-parse.py -bd -p default -i /path/to/reportsmkv.qctools.xml.gz
 
 python qct-parse.py -p default -te -tep C:\path\to\export\folder -i C:\path\to\the\report.mkv.qctools.xml.gz
 
+##some handy applescript to grep individual tags
+
+###just percentages
+
+python ./qct-parse.py -i input.mxf.qctools.xml.gz -bd -p lowTolerance | grep 'YMAX' | awk 'NR==1 {print $3}'
+
+###total number of frame failures
+
+python ./qct-parse.py -i input.mxf.qctools.xml.gz -bd -p lowTolerance | grep 'YMAX' | awk 'NR==1 {print $2}'
+
 ##dependencies
 
 Python 2.7.x.
 
 Requires that [lxml](http://lxml.de/) is installed on your system. For more info on how it's used, see [here](http://www.ibm.com/developerworks/library/x-hiperfparse/)
 
+#makeqctoolsreport.py
+
+python port of Morgan's [makeqctoolsreport.as](https://github.com/iamdamosuzuki/QCToolsReport)
+
+only works for videos with audio streams atm
+
+##example
+
+python makeqctoolsreport.py /path/to/input.mxf
 
 ##credits
 
