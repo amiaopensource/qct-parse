@@ -77,6 +77,7 @@ def makeReport():
 
 dependencies()
 startObj = sys.argv[1]
+startObj = startObj.replace("\\","/")
 inputCodec, filterstring = parseInput()
 transcode()
 makeReport()
