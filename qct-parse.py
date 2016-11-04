@@ -190,7 +190,6 @@ def printresults(kbeyond,frameCount,overallFrameFail):
 	if frameCount == 0:
 		percentOverString = "0"
 	else:
-		print "Number of frames beyond threshold for:"
 		print ""
 		print "TotalFrames:\t" + str(frameCount)
 		print ""

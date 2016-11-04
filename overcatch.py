@@ -39,7 +39,7 @@ def main():
 			print "Check the config file at " + os.path.join(dn,"qct-parse_config.txt")
 			print ""
 			pass
-	
+
 	#these will be filled with our ourput strings for each profile, later
 	barOutDict = {}
 	contentOutDict = {}
@@ -64,7 +64,6 @@ def main():
 		for profile in profileList:
 			sys.stdout.flush()
 			output = subprocess.Popen(["python","qct-parse.py","-p",profile,"-i",args.i],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-			bd = False
 			out = output.stdout.readlines()
 			for f in out:
 				match = ''
