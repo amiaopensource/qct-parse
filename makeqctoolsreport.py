@@ -7,7 +7,20 @@ import sys
 import re
 import gzip
 import shutil
+import argparse
 from distutils import spawn
+
+#Context manager for changing the current working directory
+class cd:
+    def __init__(self, newPath):
+        self.newPath = os.path.expanduser(newPath)
+
+    def __enter__(self):
+        self.savedPath = os.getcwd()
+        os.chdir(self.newPath)
+
+    def __exit__(self, etype, value, traceback):
+        os.chdir(self.savedPath)
 
 #check to see that we have the required software to run this script
 def dependencies():
@@ -18,7 +31,7 @@ def dependencies():
 			sys.exit()
 	return
 
-def parseInput():
+def parseInput(startObj):
 	#print ffprobe output to txt file, we'll grep it later to see if we need to transcode for j2k/mxf
 	ffdata = open(startObj + ".ffdata.txt","w")
 	subprocess.call(['ffprobe','-show_streams','-of','flat','-sexagesimal','-i',startObj], stdout=ffdata)
@@ -55,51 +68,75 @@ def parseInput():
 	return inputCodec, filterstring
 
 
-def transcode():
+def transcode(startObj,outPath):
 	#transcode to .nut	
-  
 	ffmpegstring = ['ffmpeg'] 
 	if not inputCodec == ' ':
 		ffmpegstring.append(inputCodec)
 	ffmpegstring.extend(['-vsync','0','-i',startObj,'-vcodec','rawvideo','-acodec','pcm_s24le'])
 	if not filterstring== ' ':
 		ffmpegstring.append(inputCodec)
-	ffmpegstring.extend(['-f','nut','-y',startObj + '%s' % '.temp1.nut'])
+	if outPath is not None:
+		outObj = os.path.join(outPath,os.path.basename(startObj) + '.temp1.nut')
+	else:
+		outObj = startObj + '.temp1.nut'
+	ffmpegstring.extend(['-f','nut','-y',outObj])
 	subprocess.call(ffmpegstring)
 
 	
-def get_audio_stream_count():
-	audio_stream_count = subprocess.check_output(['ffprobe', '-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=index','-of', 'flat', sys.argv[1]]).splitlines()
+def get_audio_stream_count(startObj):
+	audio_stream_count = subprocess.check_output(['ffprobe', '-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=index','-of', 'flat', startObj]).splitlines()
 	return len(audio_stream_count)
 	
 	
-def makeReport():
-	#here's where we use ffprobe to make the qctools report in regular xml
-	print "writing ffprobe output to xml"
-	audio_tracks = get_audio_stream_count()
-	if audio_tracks > 0:
-		ffprobe_command = ['ffprobe','-loglevel','error','-f','lavfi','-i','movie=' + startObj + ':s=v+a[in0][in1],[in0]signalstats=stat=tout+vrep+brng,cropdetect=reset=1,split[a][b];[a]field=top[a1];[b]field=bottom[b1],[a1][b1]psnr[out0];[in1]ebur128=metadata=1[out1]','-show_frames','-show_versions','-of','xml=x=1:q=1','-noprivate']
-	elif audio_tracks == 0:
-		ffprobe_command = ['ffprobe','-loglevel','error','-f','lavfi','-i','movie=' + startObj + ',signalstats=stat=tout+vrep+brng,cropdetect=reset=1,split[a][b];[a]field=top[a1];[b]field=bottom[b1],[a1][b1]psnr','-show_frames','-show_versions','-of','xml=x=1:q=1','-noprivate']
-	
-	tmpxml = open(startObj + '.qctools.xml','w')
-	subprocess.call(ffprobe_command, stdout=tmpxml)
-	tmpxml.close()
+def makeReport(startObj, outPath):
+	print os.path.dirname(startObj)
+	with cd(os.path.dirname(startObj)):
+		#here's where we use ffprobe to make the qctools report in regular xml
+		print "writing ffprobe output to xml"
+		audio_tracks = get_audio_stream_count(startObj)
+		if audio_tracks > 0:
+			ffprobe_command = ['ffprobe','-loglevel','error','-f','lavfi','-i','movie=' + os.path.basename(startObj) + ':s=v+a[in0][in1],[in0]signalstats=stat=tout+vrep+brng,cropdetect=reset=1,split[a][b];[a]field=top[a1];[b]field=bottom[b1],[a1][b1]psnr[out0];[in1]ebur128=metadata=1[out1]','-show_frames','-show_versions','-of','xml=x=1:q=1','-noprivate']
+		elif audio_tracks == 0:
+			ffprobe_command = ['ffprobe','-loglevel','error','-f','lavfi','-i','movie=' + os.path.basename(startObj) + ',signalstats=stat=tout+vrep+brng,cropdetect=reset=1,split[a][b];[a]field=top[a1];[b]field=bottom[b1],[a1][b1]psnr','-show_frames','-show_versions','-of','xml=x=1:q=1','-noprivate']
+		if outPath is not None:
+			tmpxmlpath = os.path.join(outPath,os.path.basename(startObj) + '.qctools.xml')
+		else:
+			tmpxmlpath = startObj + '.qctools.xml'
+		tmpxml = open(tmpxmlpath,'w')
+		subprocess.call(ffprobe_command, stdout=tmpxml)
+		tmpxml.close()
 
 	#gzip that tmpxml file then delete the regular xml file cause we dont need it anymore
 	print "gzip-ing ffprobe xml output"
-	with open(startObj + '.qctools.xml', 'rb') as f_in, gzip.open(startObj + '.qctools.xml.gz','wb') as f_out:
+	with open(tmpxmlpath, 'rb') as f_in, gzip.open(tmpxmlpath + '.gz','wb') as f_out:
 		shutil.copyfileobj(f_in,f_out)
-	os.remove(startObj + '.qctools.xml')
+	os.remove(tmpxmlpath)
 	if os.path.exists(startObj + '.temp1.nut'):
 		os.remove(startObj + '.temp1.nut')
 
-
+def main():
+	####init the stuff from the cli########
+	parser = argparse.ArgumentParser(description="parses QCTools XML files for frames beyond broadcast values")
+	parser.add_argument('-i','--input',dest='i',help="the path to the input video file")
+	parser.add_argument('-rop','--reportOutputPath',dest='rop',default=None,help="the path where you want to save the report, default is same dir as input video")
+	args = parser.parse_args()
+	
+	####do some string replacements for the windows folks
+	startObj = args.i.replace("\\","/")
+	if args.rop is not None:
+		outPath = args.rop.replace("\\","/")
+	else:
+		outPath = None
+	
+	#figure out how we wanna process it
+	inputCodec, filterstring = parseInput(startObj)
+	
+	#if it's a j2k file, we gotta transcode
+	if 'jpeg' in inputCodec:
+		transcode(startObj,outPath)
+		startObj = startObj + ".temp1.nut"
+	makeReport(startObj,outPath)
+		
 dependencies()
-startObj = sys.argv[1]
-startObj = startObj.replace("\\","/")
-inputCodec, filterstring = parseInput()
-if 'jpeg' in inputCodec:
-	transcode()
-	startObj = startObj + ".temp1.nut"
-makeReport()
+main()
