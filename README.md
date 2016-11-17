@@ -70,6 +70,14 @@ Python 2.7.x.
 
 Requires that [lxml](http://lxml.de/) is installed on your system. For more info on how it's used, see [here](http://www.ibm.com/developerworks/library/x-hiperfparse/)
 
+###For Windows users:
+
+We **strongly** suggest using the pre-compiled installer found [here](https://pypi.python.org/pypi/lxml/3.3.3#downloads)
+
+###For Mac users:
+
+Try pip first, then try the macport. More info can be found [here](http://lxml.de/installation.html)
+
 #makeqctoolsreport.py
 
 python port of Morgan's [makeqctoolsreport.as](https://github.com/iamdamosuzuki/QCToolsReport)
