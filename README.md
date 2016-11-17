@@ -74,7 +74,6 @@ Requires that [lxml](http://lxml.de/) is installed on your system. For more info
 
 python port of Morgan's [makeqctoolsreport.as](https://github.com/iamdamosuzuki/QCToolsReport)
 
-only works for videos with audio streams atm
 
 ##example
 
