@@ -6,6 +6,8 @@ makeqctoolsreport.py | make a qctools.xml.gz report for input video file
 
 #qct-parse.py
 
+You can run a single tag against a supplied value from the CLI or run multiple tags against values set in the qct-parse_config.txt file.
+
 ##arguments
   -h, --help                | show this help message and exit
 
