@@ -37,7 +37,9 @@ def parseInput(startObj,outPath):
 		ffdata = open(os.path.join(outPath,os.path.basename(startObj) + ".ffdata.txt"),"w")
 	else:
 		ffdata = open(startObj + ".ffdata.txt","w")
-	subprocess.call(['ffprobe','-show_streams','-of','flat','-sexagesimal','-i',startObj], stdout=ffdata)
+	nul = open(os.devnull,'w')
+	subprocess.call(['ffprobe','-show_streams','-of','flat','-sexagesimal','-i',startObj], stdout=ffdata, stderr=nul)
+	nul.close()
 	ffdata.close()
 
 	#find which stream is the video stream
