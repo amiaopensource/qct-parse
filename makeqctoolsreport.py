@@ -65,7 +65,7 @@ def parseInput(startObj,outPath):
 			[f[1:-1] for f in re.findall('".+?"', line)]
 			codecName = f[1:-1]
 	ffdata.close()
-	foo = raw_input("eh")
+	
 	if outPath is not None:
 		os.remove(os.path.join(outPath,os.path.basename(startObj) + ".ffdata.txt"))
 	else:
