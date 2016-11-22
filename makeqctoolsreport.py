@@ -98,14 +98,14 @@ def transcode(startObj,outPath):
 
 	
 def get_audio_stream_count(startObj):
-	audio_stream_count = subprocess.check_output(['ffprobe', '-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=index','-of', 'flat', startObj]).splitlines()
+	audio_stream_count = subprocess.check_output(['ffprobe', '-v', 'error','-select_streams', 'a', '-show_entries', 'stream=index','-of', 'flat', startObj]).splitlines()
 	return len(audio_stream_count)
 	
 	
 def makeReport(startObj, outPath):
 	with cd(os.path.dirname(startObj)): #change directory into folder where orig video is. necessary because movie= fails when there's a : in path, like on windows :(
 		#here's where we use ffprobe to make the qctools report in regular xml
-		print "writing ffprobe output to xml"
+		print "writing ffprobe output to xml..."
 		audio_tracks = get_audio_stream_count(startObj) #find out how many audio streams there are
 		if audio_tracks > 0:
 			#make the ffprobe for 1 or more audio tracks
@@ -139,6 +139,13 @@ def main():
 	
 	####do some string replacements for the windows folks####
 	startObj = args.i.replace("\\","/")
+	
+	#make sure it's really real
+	if not os.path.exists(startObj):
+		print ""
+		print "The input file " + startObj + " does not exist"
+		sys.exit()
+		
 	if args.rop is not None:
 		outPath = args.rop.replace("\\","/")
 	else:
