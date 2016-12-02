@@ -133,36 +133,66 @@ def makeReport(startObj, outPath):
 	if os.path.exists(startObj + '.temp1.nut'): #get rid of the intermediate nut file if we made one
 		os.remove(startObj + '.temp1.nut')
 
-def main():
-	####init the stuff from the cli########
-	parser = argparse.ArgumentParser(description="parses QCTools XML files for frames beyond broadcast values")
-	parser.add_argument('-i','--input',dest='i',help="the path to the input video file")
-	parser.add_argument('-rop','--reportOutputPath',dest='rop',default=None,help="the path where you want to save the report, default is same dir as input video")
-	args = parser.parse_args()
-	
+def inputHandler(args,defaultextlist):
 	####do some string replacements for the windows folks####
-	startObj = args.i.replace("\\","/")
+	_startObj = args.i.replace("\\","/")
 	
 	#make sure it's really real
-	if not os.path.exists(startObj):
+	if not os.path.exists(_startObj):
 		print ""
-		print "The input file " + startObj + " does not exist"
+		print "The input " + _startObj + " does not exist"
 		sys.exit()
-		
+	
+	#figure out if the startObj is a file or folder
+	soisdir = False
+	if os.path.isdir(_startObj):
+		soisdir = True
+	
+	#for the windows folks
 	if args.rop is not None:
 		outPath = args.rop.replace("\\","/")
 	else:
 		outPath = None
 	
-	#figure out how we wanna process it
-	inputCodec, filterstring = parseInput(startObj,outPath)
+	solist = []
+	if soisdir is False:
+		solist.append(_startObj)
+	else:
+		for dirs, subdirs, files in os.walk(_startObj):
+			for f in files:
+				fname,ext = os.path.splitext(f)
+				if args.ext is not None:
+					if ext in args.ext:
+						solist.append(os.path.join(dirs,f))
+				else:
+					if ext in defaultextlist:
+						solist.append(os.path.join(dirs,f))
+	return solist, outPath
+		
+def main():
+	####init the stuff from the cli########
+	parser = argparse.ArgumentParser(description="parses QCTools XML files for frames beyond broadcast values")
+	parser.add_argument('-i','--input',dest='i',help="the path to the input video file or folder")
+	parser.add_argument('-rop','--reportOutputPath',dest='rop',default=None,help="the path where you want to save the report, default is same dir as input video")
+	parser.add_argument('-ext','--extension',dest='ext',default=None,help="the file extension of the videos you want to analyze, if making reports on a folder. use a period e.g. .mov")
+	args = parser.parse_args()
 	
-	#if it's a j2k file, we gotta transcode
-	if inputCodec:
-		if 'jpeg' in inputCodec:
-			transcode(startObj,outPath)
-			startObj = startObj + ".temp1.nut"
-	makeReport(startObj,outPath)
+	defaultextlist = ['.mov','.avi','.mxf','.mp4','.mkv']
+	
+	solist, outPath = inputHandler(args,defaultextlist)
+	
+	for startObj in solist:
+		print "working on " + startObj
+		#figure out how we wanna process it
+		inputCodec, filterstring = parseInput(startObj,outPath)
+	
+		#if it's a j2k file, we gotta transcode
+		if inputCodec:
+			if 'jpeg' in inputCodec:
+				transcode(startObj,outPath)
+				startObj = startObj + ".temp1.nut"
+	
+		makeReport(startObj,outPath)
 		
 dependencies()
 main()
