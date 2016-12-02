@@ -122,6 +122,7 @@ def makeReport(startObj, outPath):
 		tmpxml = open(tmpxmlpath,'w')
 		fnull = open(os.devnull,'w')
 		retcode = subprocess.call(ffprobe_command, stdout=tmpxml,stderr=fnull) #run the ffprobe command and send the stdout to the xml file we defined
+		#foo, bar = retcode.communicate()
 		tmpxml.close()
 
 	#gzip that tmpxml file then delete the regular xml file cause we dont need it anymore
