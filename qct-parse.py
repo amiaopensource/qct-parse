@@ -181,41 +181,21 @@ def printresults(kbeyond,frameCount,overallFrameFail):
 		print "By Tag:"
 		print ""
 		percentOverall = float(overallFrameFail) / float(frameCount)
-		if percentOverall == 1:
-			percentOverallString = "100"
-		elif percentOverall == 0:
-			percentOverallString = "0"
-		elif percentOverall < 0.0001:
-			percentOverallString = "<0.01"
+		if percentOverall < 0.0001:
+			percentOverallString = "<0.01%"
 		else:
-			percentOverallString = str(percentOverall)
-			percentOverallString = percentOverallString[2:4] + "." + percentOverallString[4:]
-			if percentOverallString[0] == "0":
-				percentOverallString = percentOverallString[1:]
-				percentOverallString = percentOverallString[:4]
-			else:
-				percentOverallString = percentOverallString[:5]			
+			percentOverallString = '{0:.2%}'.format(percentOverall)	
 		for k,v in kbeyond.iteritems():
 			percentOver = float(kbeyond[k]) / float(frameCount)
-			if percentOver == 1:
-				percentOverString = "100"
-			elif percentOver == 0:
-				percentOverString = "0"
-			elif percentOver < 0.0001:
-				percentOverString = "<0.01"
+			if percentOver < 0.0001:
+				percentOverString = "<0.01%"
 			else:
-				percentOverString = str(percentOver)
-				percentOverString = percentOverString[2:4] + "." + percentOverString[4:]
-				if percentOverString[0] == "0":
-					percentOverString = percentOverString[1:]
-					percentOverString = percentOverString[:4]
-				else:
-					percentOverString = percentOverString[:5]
-			print  k + ":\t" + str(kbeyond[k]) + "\t" + percentOverString + "\t% of the total # of frames"
+				percentOverString = '{0:.2%}'.format(percentOverall)	
+			print  k + ":\t" + str(kbeyond[k]) + "\t" + percentOverString + "\t of the total # of frames"
 			print ""
 		print "Overall:"
 		print ""
-		print "Frames With At Least One Fail:\t" + str(overallFrameFail) + "\t" + percentOverallString + "\t% of the total # of frames"
+		print "Frames With At Least One Fail:\t" + str(overallFrameFail) + "\t" + percentOverallString + "\t of the total # of frames"
 		print ""
 		print "**************************"
 		print ""
