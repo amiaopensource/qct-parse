@@ -31,22 +31,7 @@ def dts2ts(frame_pkt_dts_time):
     seconds = float(frame_pkt_dts_time)
     hours, seconds = divmod(seconds, 3600)
     minutes, seconds = divmod(seconds, 60)
-    if hours < 10:
-        hours = "0" + str(int(hours))
-    else:
-        hours = str(int(hours))  
-    if minutes < 10:
-        minutes = "0" + str(int(minutes))
-    else:
-        minutes = str(int(minutes))
-    secondsStr = str(round(seconds,4))
-    if int(seconds) < 10:
-        secondsStr = "0" + secondsStr
-    else:
-        seconds = str(minutes)
-    while len(secondsStr) < 7:
-        secondsStr = secondsStr + "0"
-    timeStampString = hours + ":" + minutes + ":" + secondsStr
+    timeStampString = "%02d:%02d:%07.4f" % (hours, minutes, seconds)
     return timeStampString
 
 #initializes the log
