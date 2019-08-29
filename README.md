@@ -4,11 +4,11 @@ qct-parse.py | find frames that are beyond thresholds for saturation, luma, etc
 
 makeqctoolsreport.py | make a qctools.xml.gz report for input video file
 
-#qct-parse.py
+# qct-parse.py
 
 You can run a single tag against a supplied value from the CLI or run multiple tags against values set in the qct-parse_config.txt file.
 
-##arguments
+## arguments
   -h, --help                | show this help message and exit
 
   -i, --input            | the path to the input qctools.xml.gz file
@@ -40,54 +40,54 @@ You can run a single tag against a supplied value from the CLI or run multiple t
   -q, --quiet               | print ffmpeg output to console window, default off
 
 
-##examples
+## examples
 
-###single tags
+### single tags
 
 python qct-parse.py -t SATMAX -o 235 -t YMIN -u 16 -i /path/to/report.mkv.qctools.xml.gz
 
-###run bars against default profile from QCTools docs
+### run bars against default profile from QCTools docs
 
 python qct-parse.py -bd -p default -i /path/to/reportsmkv.qctools.xml.gz
 
-###print out thumbnails of frames beyond threshold
+### print out thumbnails of frames beyond threshold
 
 python qct-parse.py -p default -te -tep C:\path\to\export\folder -i C:\path\to\the\report.mkv.qctools.xml.gz
 
-##some handy applescript to grep individual tags
+## some handy applescript to grep individual tags
 
-###just percentages
+### just percentages
 
 python ./qct-parse.py -i input.mxf.qctools.xml.gz -bd -p lowTolerance | grep 'YMAX' | awk 'NR==1 {print $3}'
 
-###total number of frame failures
+### total number of frame failures
 
 python ./qct-parse.py -i input.mxf.qctools.xml.gz -bd -p lowTolerance | grep 'YMAX' | awk 'NR==1 {print $2}'
 
-##dependencies
+## dependencies
 
 Python 2.7.x.
 
 Requires that [lxml](http://lxml.de/) is installed on your system. For more info on how it's used, see [here](http://www.ibm.com/developerworks/library/x-hiperfparse/)
 
-###For Windows users:
+### For Windows users:
 
 We **strongly** suggest using the pre-compiled installer found [here](https://pypi.python.org/pypi/lxml/3.3.3#downloads)
 
-###For Mac users:
+### For Mac users:
 
 Try pip first, then try the macport. More info can be found [here](http://lxml.de/installation.html)
 
-#makeqctoolsreport.py
+# makeqctoolsreport.py
 
 python port of Morgan's [makeqctoolsreport.as](https://github.com/iamdamosuzuki/QCToolsReport)
 
 
-##example
+## example
 
 python makeqctoolsreport.py /path/to/input.mxf
 
-##credits
+## credits
 
 @CoatesBrendan
 
