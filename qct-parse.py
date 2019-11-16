@@ -8,7 +8,7 @@ from lxml import etree
 # for parsing input args
 import argparse
 # grip frame data values from a config txt file
-import ConfigParser
+import configparser
 # for opening gzip file
 import gzip
 # for logging output
@@ -214,7 +214,7 @@ def analyzeIt(
     if args.t:
         kbeyond[args.t] = 0
     else:
-        for k, v in profile.iteritems():
+        for k, v in profile.items():
             kbeyond[k] = 0
     with gzip.open(startObj) as xml:
         # iterparse the xml doc
@@ -279,7 +279,7 @@ def analyzeIt(
                             kbeyond[tag] = kbeyond[tag] + 1
                     # if we're using a profile
                     elif args.p is not None:
-                        for k, v in profile.iteritems():
+                        for k, v in profile.items():
                             tag = k
                             over = float(v)
                             # ACTUALLY DO THE THING ONCE FOR EACH TAG
@@ -315,7 +315,7 @@ def printresults(kbeyond, frameCount, overallFrameFail):
             percentOverallString = "<0.01%"
         else:
             percentOverallString = '{0:.2%}'.format(percentOverall)
-        for k, v in kbeyond.iteritems():
+        for k, v in kbeyond.items():
             percentOver = float(kbeyond[k]) / float(frameCount)
             if percentOver < 0.0001:
                 percentOverString = "<0.01%"
@@ -438,7 +438,7 @@ def main():
         "mse_avg", "psnr_y", "psnr_u", "psnr_v", "psnr_avg"
     ]
     if args.p is not None:
-        config = ConfigParser.RawConfigParser(allow_no_value=True)
+        config = configparser.RawConfigParser(allow_no_value=True)
         # grip the dir where ~this script~ is located, also where config.txt
         # should be located
         dn, fn = os.path.split(os.path.abspath(__file__))
@@ -454,7 +454,7 @@ def main():
                 # xml attributes use, assign the value in config
                 profile[t.replace("_", ".")] = config.get(template, t)
             # if no config tag exists, do nothing so we can move faster
-            except KeyError:
+            except configparser.NoOptionError:
                 pass
     # Initialize some other stuff######
     startObj = args.i.replace("\\", "/")
@@ -490,7 +490,7 @@ def main():
                 # we gotta find out if the qctools report has
                 # pkt_dts_time or pkt_pts_time ugh
                 match = ''
-                match = re.search(r"pkt_.ts_time", etree.tostring(elem))
+                match = re.search(r"pkt_.ts_time", str(etree.tostring(elem)))
                 if match:
                     pkt = match.group()
                     break
