@@ -36,7 +36,7 @@ def dependencies():
     depends = ['ffmpeg', 'ffprobe']
     for d in depends:
         if spawn.find_executable(d) is None:
-            print "Buddy, you gotta install " + d
+            print("Buddy, you gotta install {}".format(d))
             sys.exit()
     return
 
@@ -139,8 +139,8 @@ def printThumb(args, tag, startObj, thumbPath, tagValue, timeStampString):
     )
     out, err = output.communicate()
     if args.q is False:
-        print out
-        print err
+        print(out)
+        print(err)
     return
 
 
@@ -185,15 +185,17 @@ def detectBars(
                             durationStart = float(
                                 framesList[middleFrame][pkt]
                             )
-                            print "Bars start at {} ({})".format(
-                                str(framesList[middleFrame][pkt]),
-                                dts2ts(framesList[middleFrame][pkt])
+                            print("Bars start at {} ({})".format(
+                                    str(framesList[middleFrame][pkt]),
+                                    dts2ts(framesList[middleFrame][pkt])
+                                )
                             )
                         durationEnd = float(framesList[middleFrame][pkt])
                     else:
-                        print "Bars ended at {} ({})".format(
-                            str(framesList[middleFrame][pkt]),
-                            dts2ts(framesList[middleFrame][pkt])
+                        print("Bars ended at {} ({})".format(
+                                str(framesList[middleFrame][pkt]),
+                                dts2ts(framesList[middleFrame][pkt])
+                            )
                         )
                         break
             # we're done with that element so let's get it outta memory
@@ -226,11 +228,12 @@ def analyzeIt(
                 if float(frame_pkt_dts_time) >= durationStart:
                     # only work on frames that are before the end time
                     if float(frame_pkt_dts_time) > durationEnd:
-                        print "started at {} seconds and stopped at {} seconds"
-                        " ({}) or {} frames!".format(
-                            str(durationStart), str(frame_pkt_dts_time),
-                            dts2ts(frame_pkt_dts_time), str(frameCount)
-                        )
+                        print("started at {} seconds and stopped at {} seconds"
+                              " ({}) or {} frames!".format(
+                                str(durationStart), str(frame_pkt_dts_time),
+                                dts2ts(frame_pkt_dts_time), str(frameCount)
+                              )
+                              )
                         break
                         # start an empty dict for the new frame
                     frameDict = {}
@@ -254,8 +257,9 @@ def analyzeIt(
                     # display "timestamp: Tag Value" (654.754100: YMAX 229)
                     # to the terminal window
                     if args.pr is True:
-                        print "{}: {} {}".format(
+                        print("{}: {} {}".format(
                             framesList[-1][pkt], args.t, framesList[-1][args.t]
+                        )
                         )
                     # Now we can parse the frame data from the buffer!
                     # if we're just doing a single tag
@@ -304,11 +308,8 @@ def printresults(kbeyond, frameCount, overallFrameFail):
     if frameCount == 0:
         percentOverString = "0"
     else:
-        print ""
-        print "TotalFrames:\t" + str(frameCount)
-        print ""
-        print "By Tag:"
-        print ""
+        print("\nTotalFrames:\t{}\n".format(str(frameCount)))
+        print("By Tag:\n")
         percentOverall = float(overallFrameFail) / float(frameCount)
         if percentOverall < 0.0001:
             percentOverallString = "<0.01%"
@@ -320,17 +321,17 @@ def printresults(kbeyond, frameCount, overallFrameFail):
                 percentOverString = "<0.01%"
             else:
                 percentOverString = '{0:.2%}'.format(percentOverall)
-            print "{}: \t{}\t{}\t of the total # of frames".format(
-                k, str(kbeyond[k]), percentOverString
+            print("{}: \t{}\t{}\t of the total # of frames\n".format(
+                    k, str(kbeyond[k]), percentOverString
+                )
             )
-            print ""
-        print "Overall:"
-        print ""
-        print "Frames With At Least One Fail:\t{}\t{}\t of the total"
-        " # of frames".format(str(overallFrameFail), percentOverallString)
-        print ""
-        print "**************************"
-        print ""
+        print("Overall:\n")
+        print("Frames With At Least One Fail:\t{}\t{}\t of the total"
+              " # of frames\n".format(
+                    str(overallFrameFail), percentOverallString
+                )
+              )
+        print("**************************\n")
     return
 
 
@@ -509,9 +510,10 @@ def main():
         durationEnd = float(args.de)
     # set the path for the thumbnail export$
     if args.tep and not args.te:
-        print "Buddy, you specified a thumbnail export path without"
-        " specifying that you wanted to export the thumbnails. Please"
-        " either add '-te' to your cli call or delete '-tep [path]'"
+        print("Buddy, you specified a thumbnail export path without"
+              " specifying that you wanted to export the thumbnails. Please"
+              " either add '-te' to your cli call or delete '-tep [path]'"
+              )
     # if user supplied thumbExportPath, use that
     if args.tep:
         thumbPath = str(args.tep)
@@ -537,23 +539,18 @@ def main():
             os.makedirs(thumbPath)
     # Iterate Through the XML for Bars detection########
     if args.bd:
-        print ""
-        print "Starting Bars Detection on " + baseName
-        print ""
+        print("\nStarting Bars Detection on {}\n".format(baseName))
         durationStart, durationEnd = detectBars(
             args, startObj, pkt, durationStart, durationEnd,
             framesList, buffSize
         )
     # Iterate Through the XML for General Analysis########
-    print ""
-    print "Starting Analysis on " + baseName
-    print ""
+    print("\nStarting Analysis on {}\n".format(baseName))
     kbeyond, frameCount, overallFrameFail = analyzeIt(
         args, profile, startObj, pkt, durationStart, durationEnd,
         thumbPath, thumbDelay, framesList
     )
-    print "Finished Processing File: " + baseName + ".qctools.xml.gz"
-    print ""
+    print("Finished Processing File: {}.qctools.xml.gz\n".format(baseName))
     # do some maths for the printout
     if args.o or args.u or args.p is not None:
         printresults(kbeyond, frameCount, overallFrameFail)
