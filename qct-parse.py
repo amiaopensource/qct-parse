@@ -22,7 +22,7 @@ def dependencies():
 	depends = ['ffmpeg','ffprobe']
 	for d in depends:
 		if spawn.find_executable(d) is None:
-			print "Buddy, you gotta install " + d
+			print()"Buddy, you gotta install " + d)
 			sys.exit()
 	return
 
@@ -34,7 +34,7 @@ def dts2ts(frame_pkt_dts_time):
     if hours < 10:
         hours = "0" + str(int(hours))
     else:
-        hours = str(int(hours))  
+        hours = str(int(hours))
     if minutes < 10:
         minutes = "0" + str(int(minutes))
     else:
@@ -54,7 +54,7 @@ def initLog(inputPath):
 	logPath = inputPath + '.log'
 	logging.basicConfig(filename=logPath,level=logging.INFO,format='%(asctime)s %(message)s')
 	logging.info("Started QCT-Parse")
-	
+
 #finds stuff over/under threshold
 def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay):
 	tagValue = float(inFrame[tag])
@@ -81,7 +81,7 @@ def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay):
 		else:
 			return False, thumbDelay #return false because it was NOT over and thumbDelay
 
-#print thumbnail images of overs/unders	
+#prints thumbnail images of overs/unders
 def printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString):
 	####init some variables using the args list
 	inputVid = startObj.replace(".qctools.xml.gz", "")
@@ -98,11 +98,11 @@ def printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString):
 	output = subprocess.Popen(ffmpegString,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
 	out,err = output.communicate()
 	if args.q is False:
-		print out
-		print err
-	return	
-	
-#detect bars	
+		print(out)
+		print(err)
+	return
+
+#detect bars
 def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 	with gzip.open(startObj) as xml:
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): #iterparse the xml doc
@@ -111,7 +111,7 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 				frameDict = {}  #start an empty dict for the new frame
 				frameDict[pkt] = frame_pkt_dts_time  #give the dict the timestamp, which we have now
 				for t in list(elem):    #iterating through each attribute for each element
-					keySplit = t.attrib['key'].split(".")   #split the names by dots 
+					keySplit = t.attrib['key'].split(".")   #split the names by dots
 					keyName = str(keySplit[-1])             #get just the last word for the key name
 					frameDict[keyName] = t.attrib['value']	#add each attribute to the frame dictionary
 				framesList.append(frameDict)
@@ -122,10 +122,10 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 					if int(framesList[middleFrame]['YMAX']) > 210 and int(framesList[middleFrame]['YMIN']) < 10 and float(framesList[middleFrame]['YDIF']) < 3.0:
 						if durationStart == "":
 							durationStart = float(framesList[middleFrame][pkt])
-							print "Bars start at " + str(framesList[middleFrame][pkt]) + " (" + dts2ts(framesList[middleFrame][pkt]) + ")"							
+							print("Bars start at " + str(framesList[middleFrame][pkt]) + " (" + dts2ts(framesList[middleFrame][pkt]) + ")")
 						durationEnd = float(framesList[middleFrame][pkt])
 					else:
-						print "Bars ended at " + str(framesList[middleFrame][pkt]) + " (" + dts2ts(framesList[middleFrame][pkt]) + ")"							
+						print("Bars ended at " + str(framesList[middleFrame][pkt]) + " (" + dts2ts(framesList[middleFrame][pkt]) + ")")
 						break
 			elem.clear() #we're done with that element so let's get it outta memory
 	return durationStart, durationEnd
@@ -134,31 +134,31 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 	kbeyond = {} #init a dict for each key which we'll use to track how often a given key is over
 	fots = ""
 	if args.t:
-		kbeyond[args.t] = 0 
+		kbeyond[args.t] = 0
 	else:
-		for k,v in profile.iteritems(): 
+		for k,v in profile.iteritems():
 			kbeyond[k] = 0
-	with gzip.open(startObj) as xml:	
+	with gzip.open(startObj) as xml:
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): #iterparse the xml doc
 			if elem.attrib['media_type'] == "video": #get just the video frames
 				frameCount = frameCount + 1
 				frame_pkt_dts_time = elem.attrib[pkt] #get the timestamps for the current frame we're looking at
 				if float(frame_pkt_dts_time) >= durationStart:	#only work on frames that are after the start time
 					if float(frame_pkt_dts_time) > durationEnd:	#only work on frames that are before the end time
-						print "started at " + str(durationStart) + " seconds and stopped at " + str(frame_pkt_dts_time) + " seconds (" + dts2ts(frame_pkt_dts_time) + ") or " + str(frameCount) + " frames!"
+						print("started at " + str(durationStart) + " seconds and stopped at " + str(frame_pkt_dts_time) + " seconds (" + dts2ts(frame_pkt_dts_time) + ") or " + str(frameCount) + " frames!")
 						break
 					frameDict = {}  								#start an empty dict for the new frame
 					frameDict[pkt] = frame_pkt_dts_time  #make a key for the timestamp, which we have now
 					for t in list(elem):    						#iterating through each attribute for each element
-						keySplit = t.attrib['key'].split(".")   	#split the names by dots 
+						keySplit = t.attrib['key'].split(".")   	#split the names by dots
 						keyName = str(keySplit[-1])             	#get just the last word for the key name
 						if len(keyName) == 1:						#if it's psnr or mse, keyName is gonna be a single char
 							keyName = '.'.join(keySplit[-2:])		#full attribute made by combining last 2 parts of split with a period in btw
 						frameDict[keyName] = t.attrib['value']		#add each attribute to the frame dictionary
 					framesList.append(frameDict)					#add this dict to our circular buffer
 					if args.pr is True:	#display "timestamp: Tag Value" (654.754100: YMAX 229) to the terminal window
-						print framesList[-1][pkt] + ": " + args.t + " " + framesList[-1][args.t]
-					#Now we can parse the frame data from the buffer!	
+						print(framesList[-1][pkt] + ": " + args.t + " " + framesList[-1][args.t])
+					#Now we can parse the frame data from the buffer!
 					if args.o or args.u and args.p is None: #if we're just doing a single tag
 						tag = args.t
 						if args.o:
@@ -180,21 +180,21 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 								if not frame_pkt_dts_time in fots: #make sure that we only count each over frame once
 									overallFrameFail = overallFrameFail + 1
 									fots = frame_pkt_dts_time #set it again so we don't dupe
-					thumbDelay = thumbDelay + 1				
+					thumbDelay = thumbDelay + 1
 			elem.clear() #we're done with that element so let's get it outta memory
 	return kbeyond, frameCount, overallFrameFail
 
 
-#This function is admittedly very ugly, but what it puts out is very pretty. Need to revamp 	
+#This function is admittedly very ugly, but what it puts out is very pretty. Need to revamp
 def printresults(kbeyond,frameCount,overallFrameFail):
 	if frameCount == 0:
 		percentOverString = "0"
 	else:
-		print ""
-		print "TotalFrames:\t" + str(frameCount)
-		print ""
-		print "By Tag:"
-		print ""
+		print("")
+		print("TotalFrames:\t" + str(frameCount))
+		print("")
+		print("By Tag:")
+		print("")
 		percentOverall = float(overallFrameFail) / float(frameCount)
 		if percentOverall == 1:
 			percentOverallString = "100"
@@ -209,7 +209,7 @@ def printresults(kbeyond,frameCount,overallFrameFail):
 				percentOverallString = percentOverallString[1:]
 				percentOverallString = percentOverallString[:4]
 			else:
-				percentOverallString = percentOverallString[:5]			
+				percentOverallString = percentOverallString[:5]
 		for k,v in kbeyond.iteritems():
 			percentOver = float(kbeyond[k]) / float(frameCount)
 			if percentOver == 1:
@@ -226,16 +226,16 @@ def printresults(kbeyond,frameCount,overallFrameFail):
 					percentOverString = percentOverString[:4]
 				else:
 					percentOverString = percentOverString[:5]
-			print  k + ":\t" + str(kbeyond[k]) + "\t" + percentOverString + "\t% of the total # of frames"
-			print ""
-		print "Overall:"
-		print ""
-		print "Frames With At Least One Fail:\t" + str(overallFrameFail) + "\t" + percentOverallString + "\t% of the total # of frames"
-		print ""
-		print "**************************"
-		print ""
+			print(k + ":\t" + str(kbeyond[k]) + "\t" + percentOverString + "\t% of the total # of frames")
+			print("")
+		print("Overall:")
+		print("")
+		print("Frames With At Least One Fail:\t" + str(overallFrameFail) + "\t" + percentOverallString + "\t% of the total # of frames")
+		print("")
+		print("**************************")
+		print("")
 	return
-	
+
 def main():
 	####init the stuff from the cli########
 	parser = argparse.ArgumentParser(description="parses QCTools XML files for frames beyond broadcast values")
@@ -251,11 +251,11 @@ def main():
 	parser.add_argument('-ds','--durationStart',dest='ds',default=0, help="the duration in seconds to start analysis")
 	parser.add_argument('-de','--durationEnd',dest='de',default=99999999, help="the duration in seconds to stop analysis")
 	parser.add_argument('-bd','--barsDetection',dest='bd',action ='store_true',default=False, help="turns Bar Detection on and off")
-	parser.add_argument('-pr','--print',dest='pr',action='store_true',default=False, help="print over/under frame data to console window")
+	parser.add_argument('-pr','--print',dest='pr',action='store_true',default=False, help="prints over/under frame data to console window")
 	parser.add_argument('-q','--quiet',dest='q',action='store_true',default=False, help="hide ffmpeg output from console window")
 	args = parser.parse_args()
-	
-	
+
+
 	######Initialize values from the Config Parser
 	profile = {} #init a dictionary where we'll store reference values from our config file
 	#init a list of every tag available in a QCTools Report
@@ -265,12 +265,12 @@ def main():
 		dn, fn = os.path.split(os.path.abspath(__file__)) #grip the dir where ~this script~ is located, also where config.txt should be located
 		config.read(os.path.join(dn,"qct-parse_config.txt")) #read in the config file
 		template = args.p #get the profile/ section name from CLI
-		for t in tagList: 			#loop thru every tag available and 
+		for t in tagList: 			#loop thru every tag available and
 			try: 					#see if it's in the config section
 				profile[t.replace("_",".")] = config.get(template,t) #if it is, replace _ necessary for config file with . which xml attributes use, assign the value in config
 			except: #if no config tag exists, do nothing so we can move faster
 				pass
-	
+
 	######Initialize some other stuff######
 	startObj = args.i.replace("\\","/")
 	buffSize = int(args.buff)   #cast the input buffer as an integer
@@ -280,8 +280,8 @@ def main():
 	overcount = 0	#init count of overs
 	undercount = 0	#init count of unders
 	count = 0		#init total frames counter
-	framesList = collections.deque(maxlen=buffSize)		#init holding object for holding all frame data in a circular buffer. 
-	bdFramesList = collections.deque(maxlen=buffSize) 	#init holding object for holding all frame data in a circular buffer. 
+	framesList = collections.deque(maxlen=buffSize)		#init holding object for holding all frame data in a circular buffer.
+	bdFramesList = collections.deque(maxlen=buffSize) 	#init holding object for holding all frame data in a circular buffer.
 	thumbDelay = int(args.ted)	#get a seconds number for the delay in the original file btw exporting tags
 	parentDir = os.path.dirname(startObj)
 	baseName = os.path.basename(startObj)
@@ -290,7 +290,7 @@ def main():
 	durationEnd = args.de
 
 	#we gotta find out if the qctools report has pkt_dts_time or pkt_pts_time ugh
-	with gzip.open(startObj) as xml:	
+	with gzip.open(startObj) as xml:
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): #iterparse the xml doc
 			if elem.attrib['media_type'] == "video": #get just the video frames
 				#we gotta find out if the qctools report has pkt_dts_time or pkt_pts_time ugh
@@ -308,12 +308,12 @@ def main():
 		durationStart = float(args.ds) 	#The duration at which we start analyzing the file if no bar detection is selected
 	elif not args.de == 99999999:
 		durationEnd = float(args.de) 	#The duration at which we stop analyzing the file if no bar detection is selected
-	
-	
-	#set the path for the thumbnail export	
+
+
+	#set the path for the thumbnail export
 	if args.tep and not args.te:
-		print "Buddy, you specified a thumbnail export path without specifying that you wanted to export the thumbnails. Please either add '-te' to your cli call or delete '-tep [path]'"
-	
+		print("Buddy, you specified a thumbnail export path without specifying that you wanted to export the thumbnails. Please either add '-te' to your cli call or delete '-tep [path]'")
+
 	if args.tep: #if user supplied thumbExportPath, use that
 	    thumbPath = str(args.tep)
 	else:
@@ -327,32 +327,32 @@ def main():
 	if args.te: #make the thumb export path if it doesn't already exist
 		if not os.path.exists(thumbPath):
 			os.makedirs(thumbPath)
-	
-	
+
+
 	########Iterate Through the XML for Bars detection########
 	if args.bd:
-		print ""
-		print "Starting Bars Detection on " + baseName
-		print ""
+		print("")
+		print("Starting Bars Detection on " + baseName)
+		print("")
 		durationStart,durationEnd = detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,)
-	
+
 
 	########Iterate Through the XML for General Analysis########
-	print ""
-	print "Starting Analysis on " + baseName
-	print ""
+	print("")
+	print("Starting Analysis on " + baseName)
+	print("")
 	kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
-	
-	
-	print "Finished Processing File: " + baseName + ".qctools.xml.gz"
-	print ""
-	
-	
+
+
+	print("Finished Processing File: " + baseName + ".qctools.xml.gz")
+	print("")
+
+
 	#do some maths for the printout
 	if args.o or args.u or args.p is not None:
 		printresults(kbeyond,frameCount,overallFrameFail)
-	
+
 	return
 
-dependencies()	
+dependencies()
 main()
