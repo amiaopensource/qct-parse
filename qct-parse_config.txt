@@ -48,9 +48,17 @@ SATMAX: 181.02
 TOUT: 0.009
 VREP: 0.03
 
-#Broadcast Range Only
-[broadcastRange]
-BRNG: 0.25
+#Default profile values for 8-bit depth video files
+[8bitDefault]
+YLOW: 16
+YHIGH: 235
+ULOW: 16
+UHIGH: 235
+VLOW: 0
+VHIGH: 255
+SATMAX: 181.02
+TOUT: 0.009
+VREP: 0.03
 
 [fullTagList]
 YMIN:
