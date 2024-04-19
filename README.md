@@ -87,7 +87,9 @@ python port of Morgan's [makeqctoolsreport.as](https://github.com/iamdamosuzuki/
 
 python makeqctoolsreport.py /path/to/input.mxf
 
-## credits
+## contributors
+
+@eddycolloton
 
 @CoatesBrendan
 
