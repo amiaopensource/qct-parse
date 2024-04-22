@@ -95,6 +95,8 @@ python makeqctoolsreport.py /path/to/input.mxf
 
 @av_morgan
 
-## maintainer
+## maintainers
 
 @av_morgan
+
+@eddycolloton
