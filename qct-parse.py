@@ -186,6 +186,9 @@ def printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString):
 		ffmpegString = "ffmpeg -ss " + timeStampString + ' -i "' + inputVid +  '" -vframes 1 -s 720x486 -y "' + ffoutputFramePath + '"' # Hardcoded output frame size to 720x486 for now, need to infer from input eventually
 		output = subprocess.Popen(ffmpegString,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
 		out,err = output.communicate()
+		# Decode byte strings to handle newlines properly
+		out = out.decode('utf-8')
+		err = err.decode('utf-8')
 		if args.q is False:
 			print(out)
 			print(err)
@@ -350,89 +353,54 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 
 
 # This function is admittedly very ugly, but what it puts out is very pretty. Need to revamp 	
-def printresults(kbeyond,frameCount,overallFrameFail):
-	"""
-    Prints the analysis results of video frame threshold exceedances.
-
-    This function outputs the total number of frames processed, the count and percentage of frames that exceeded thresholds for each tag, 
-    and the overall number of frames with at least one threshold failure. It formats percentages, ensuring precision for very small or 
-    very large values, and handles edge cases such as zero frames or zero threshold exceedances.
+def printresults(kbeyond, frameCount, overallFrameFail):
+    """
+    Prints the analysis results of frame data, including counts of frames exceeding thresholds 
+    for various tags and the percentage of total frames that are affected.
 
     Args:
-        kbeyond (dict): A dictionary where keys are tags and values are counts of frames that exceeded the threshold for that tag.
-        frameCount (int): The total number of video frames analyzed.
-        overallFrameFail (int): The total number of frames that had at least one threshold failure across any tag.
+        kbeyond (dict): A dictionary where keys are tag names and values are the counts of frames 
+                        that exceed the threshold for each tag.
+        frameCount (int): The total number of frames analyzed.
+        overallFrameFail (int): The number of frames where at least one tag exceeds its threshold.
 
-    Returns:
-        None: The function prints the results directly to the console.
+    Prints:
+        - The total number of frames analyzed.
+        - A breakdown of frame counts for each tag in `kbeyond` and the corresponding percentage 
+          of the total frames that exceeded the tag's threshold.
+        - The overall count and percentage of frames that failed at least one threshold.
 
-    Behavior:
-        - If no frames were processed (`frameCount == 0`), outputs "0" for the percentage of threshold failures.
-        - For each tag in `kbeyond`, calculates and prints the percentage of frames that exceeded the threshold.
-        - Calculates and prints the overall percentage of frames that had at least one threshold failure.
-        - Handles formatting of very small percentages by outputting "<0.01%" when the value is smaller than 0.0001, and ensures percentages 
-          are formatted to two decimal places otherwise.
-
-    Example usage:
-        printresults(kbeyond, frameCount, overallFrameFail)
-
-    Output Format:
-        TotalFrames:    <frameCount>
-        
-        By Tag:
-        <tag>:          <# of fails>    <percentage of frames that failed>  % of the total # of frames
-        
-        Overall:
-        Frames With At Least One Fail:   <overallFrameFail>    <percentage of frames with at least one fail>  % of the total # of frames
+    Notes:
+        - If `frameCount` is zero, it prints "TotalFrames: 0" and returns early.
+        - Percentages are formatted as whole numbers (e.g., "100"), two decimal places 
+          (e.g., "12.34"), or "<0.01" for values less than 0.01%.
     """
-	if frameCount == 0:
-		percentOverString = "0"
-	else:
-		print("")
-		print("TotalFrames:\t" + str(frameCount))
-		print("")
-		print("By Tag:")
-		print("")
-		percentOverall = float(overallFrameFail) / float(frameCount)
-		if percentOverall == 1:
-			percentOverallString = "100"
-		elif percentOverall == 0:
-			percentOverallString = "0"
-		elif percentOverall < 0.0001:
-			percentOverallString = "<0.01"
-		else:
-			percentOverallString = str(percentOverall)
-			percentOverallString = percentOverallString[2:4] + "." + percentOverallString[4:]
-			if percentOverallString[0] == "0":
-				percentOverallString = percentOverallString[1:]
-				percentOverallString = percentOverallString[:4]
-			else:
-				percentOverallString = percentOverallString[:5]			
-		for k,v in kbeyond.items():
-			percentOver = float(kbeyond[k]) / float(frameCount)
-			if percentOver == 1:
-				percentOverString = "100"
-			elif percentOver == 0:
-				percentOverString = "0"
-			elif percentOver < 0.0001:
-				percentOverString = "<0.01"
-			else:
-				percentOverString = str(percentOver)
-				percentOverString = percentOverString[2:4] + "." + percentOverString[4:]
-				if percentOverString[0] == "0":
-					percentOverString = percentOverString[1:]
-					percentOverString = percentOverString[:4]
-				else:
-					percentOverString = percentOverString[:5]
-			print(k + ":\t" + str(kbeyond[k]) + "\t" + percentOverString + "\t% of the total # of frames")
-			print("")
-		print("Overall:")
-		print("")
-		print("Frames With At Least One Fail:\t" + str(overallFrameFail) + "\t" + percentOverallString + "\t% of the total # of frames")
-		print("")
-		print("**************************")
-		print("")
-	return
+    def format_percentage(value):
+        percent = value * 100
+        if percent == 100:
+            return "100"
+        elif percent == 0:
+            return "0"
+        elif percent < 0.01:
+            return "<0.01"
+        else:
+            return f"{percent:.2f}"
+
+    if frameCount == 0:
+        print("TotalFrames:\t0")
+        return
+
+    print(f"\nTotalFrames:\t{frameCount}\n")
+    print("By Tag:\n")
+
+    for tag, count in kbeyond.items():
+        percent_over_string = format_percentage(count / frameCount)
+        print(f"{tag}:\t{count}\t{percent_over_string}\t% of the total # of frames\n")
+
+    print("Overall:\n")
+    percent_overall_string = format_percentage(overallFrameFail / frameCount)
+    print(f"Frames With At Least One Fail:\t{overallFrameFail}\t{percent_overall_string}\t% of the total # of frames\n")
+    print("**************************\n")
 
 	
 def main():
@@ -583,7 +551,7 @@ def main():
 	kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
 	
 	
-	print("Finished Processing File: " + baseName + ".qctools.xml.gz")
+	print(f"\nFinished Processing File: " + baseName + ".qctools.xml.gz")
 	print("")
 	
 	
