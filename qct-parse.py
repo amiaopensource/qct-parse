@@ -370,20 +370,19 @@ def detectBitdepth(startObj,pkt,framesList,buffSize):
 				if len(framesList) == buffSize:	# wait till the buffer is full to start detecting bars
 					## This is where the bars detection magic actually happens
 					bufferRange = list(range(0, buffSize))
-					if 'YMAX' in t.attrib['key']:
-						if float(t.attrib['value']) > 250:
-							bit_depth_10 = True
-							end_time = time.time()
-							total_time = end_time - start_time
-							formatted_total_time = time.strftime("%H:%M:%S", time.gmtime(total_time))
-							break
+					if float(framesList[middleFrame]['YMAX']) > 250:
+						bit_depth_10 = True
+						end_time = time.time()
+						total_time = end_time - start_time
+						formatted_total_time = time.strftime("%H:%M:%S", time.gmtime(total_time))
+						break
 			elem.clear() # we're done with that element so let's get it outta memory
 			
 	if not bit_depth_10:
 		end_time = time.time()
 		total_time = end_time - start_time
 		formatted_total_time = time.strftime("%H:%M:%S", time.gmtime(total_time))
-	print(formatted_total_time)
+
 	return bit_depth_10
 
 
@@ -541,6 +540,7 @@ def main():
 					pkt = match.group()
 					break
 
+	bit_depth_10 = False
 	bit_depth_10 = detectBitdepth(startObj,pkt,framesList,buffSize)
 
 	# set the start and end duration times
