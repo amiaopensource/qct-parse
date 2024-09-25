@@ -550,7 +550,7 @@ def main():
 	kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
 	
 	
-	print("Finished Processing File: " + baseName + ".qctools.xml.gz")
+	print(f"\nFinished Processing File: " + baseName + ".qctools.xml.gz")
 	print("")
 	
 	
