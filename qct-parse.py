@@ -188,6 +188,9 @@ def printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString):
 		ffmpegString = "ffmpeg -ss " + timeStampString + ' -i "' + inputVid +  '" -vframes 1 -s 720x486 -y "' + ffoutputFramePath + '"' # Hardcoded output frame size to 720x486 for now, need to infer from input eventually
 		output = subprocess.Popen(ffmpegString,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
 		out,err = output.communicate()
+		# Decode byte strings to handle newlines properly
+		out = out.decode('utf-8')
+		err = err.decode('utf-8')
 		if args.q is False:
 			print(out)
 			print(err)
