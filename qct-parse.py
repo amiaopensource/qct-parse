@@ -352,13 +352,24 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 			elem.clear() # we're done with that element so let's get it outta memory
 	return kbeyond, frameCount, overallFrameFail
 
-def detectBitdepth(startObj):
+def detectBitdepth(startObj,pkt,framesList,buffSize):
 	start_time = time.time()
 	bit_depth_10 = False
 	with gzip.open(startObj) as xml:
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): # iterparse the xml doc
 			if elem.attrib['media_type'] == "video": # get just the video frames
+				frame_pkt_dts_time = elem.attrib[pkt] # get the timestamps for the current frame we're looking at
+				frameDict = {}  # start an empty dict for the new frame
+				frameDict[pkt] = frame_pkt_dts_time  # give the dict the timestamp, which we have now
 				for t in list(elem):    # iterating through each attribute for each element
+					keySplit = t.attrib['key'].split(".")   # split the names by dots 
+					keyName = str(keySplit[-1])             # get just the last word for the key name
+					frameDict[keyName] = t.attrib['value']	# add each attribute to the frame dictionary
+				framesList.append(frameDict)
+				middleFrame = int(round(float(len(framesList))/2))	# i hate this calculation, but it gets us the middle index of the list as an integer
+				if len(framesList) == buffSize:	# wait till the buffer is full to start detecting bars
+					## This is where the bars detection magic actually happens
+					bufferRange = list(range(0, buffSize))
 					if 'YMAX' in t.attrib['key']:
 						if float(t.attrib['value']) > 250:
 							bit_depth_10 = True
@@ -366,6 +377,8 @@ def detectBitdepth(startObj):
 							total_time = end_time - start_time
 							formatted_total_time = time.strftime("%H:%M:%S", time.gmtime(total_time))
 							break
+			elem.clear() # we're done with that element so let's get it outta memory
+			
 	if not bit_depth_10:
 		end_time = time.time()
 		total_time = end_time - start_time
@@ -528,8 +541,7 @@ def main():
 					pkt = match.group()
 					break
 
-	bit_depth_10 = False
-	bit_depth_10 = detectBitdepth(startObj)
+	bit_depth_10 = detectBitdepth(startObj,pkt,framesList,buffSize)
 
 	# set the start and end duration times
 	if args.bd:
