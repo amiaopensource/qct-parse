@@ -40,15 +40,13 @@ def dependencies():
 # Creates timestamp for pkt_dts_time
 def dts2ts(frame_pkt_dts_time):
 	"""
-    Converts a given packet decoding timestamp (pkt_dts_time) to a human-readable timestamp.
-
-    The timestamp is formatted as HH:MM:SS.SSSS with up to four decimal places for the seconds.
+    Converts a given pkt_dts_time to a human-readable timestamp formatted as HH:MM:SS.SSSS.
 
     Args:
-        frame_pkt_dts_time (float or str): The pkt_dts_time value representing time in seconds.
+        frame_pkt_dts_time (float or str): The pkt_dts_time value from the QCTools <frame> XML.
 
     Returns:
-        str: A string representation of the time in the format HH:MM:SS.SSSS.
+        str: A timestamp string in the format HH:MM:SS.SSSS.
     """
 	seconds = float(frame_pkt_dts_time)
 	hours, seconds = divmod(seconds, 3600)
@@ -96,7 +94,7 @@ def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay):
 	"""
     Evaluates whether a tag in a video frame exceeds or falls below a threshold value and logs the result.
 
-    This function checks if a given frame's tag value is either below or above an upper threshold.
+    This function checks if a given frame's tag value is either below or above a threshold.
     It logs a warning if the value is outside the expected range and can optionally export a thumbnail.
     
     Args:
@@ -105,7 +103,7 @@ def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay):
         startObj (object): Path to the QCTools report file (.qctools.xml.gz)
         pkt (str): The key used to extract timestamps from <frame> tag in qctools.xml.gz.
         tag (str):  Tag from frame in qctools.xml.gz, checked against thresholds.
-        over (float): Upper threshold for the tag value.
+        over (float): Threshold for the tag value.
         thumbPath (str): Path to save thumbnails if they are exported.
         thumbDelay (int): Current delay counter for thumbnail exports.
 
@@ -115,8 +113,8 @@ def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay):
             int: Updated `thumbDelay` value based on whether a thumbnail was exported or not.
     
     Behavior:
-        - If the attribute value is below the lower threshold (for keys containing "MIN" or "LOW"), logs a warning and may export a thumbnail.
-        - If the attribute value is above the upper threshold, logs a warning and may export a thumbnail.
+        - If the tag value is below the lower threshold (for keys containing "MIN" or "LOW"), logs a warning and may export a thumbnail.
+        - If the tag value is above the upper threshold, logs a warning and may export a thumbnail.
         - Thumbnail export occurs if enabled (`args.te`) and if the delay since the last export exceeds the user-defined threshold (`args.ted`).
     """
 	tagValue = float(inFrame[tag])
@@ -202,14 +200,14 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 	"""
     Detects color bars in a video by analyzing frames within a buffered window and logging the start and end times of the bars.
 
-    This function iterates through the frames of a video described in a QCTools report, parses each video frame, 
+    This function iterates through the frames in a QCTools report, parses each frame, 
     and analyzes specific tags (YMAX, YMIN, YDIF) to detect the presence of color bars. 
     The detection checks a frame each time the buffer reaches the specified size (`buffSize`) and ends when the frame tags no longer match the expected bar values.
 
     Args:
         args (argparse.Namespace): Parsed command-line arguments.
         startObj (str): Path to the QCTools report file (.qctools.xml.gz)
-        pkt (str): Key used to identify the packet timestamp (pkt_dts_time) in the XML frames.
+        pkt (str): Key used to identify the packet timestamp (pkt_*ts_time) in the XML frames.
         durationStart (str): The timestamp when the bars start, initially an empty string.
         durationEnd (str): The timestamp when the bars end, initially an empty string.
         framesList (list): List of dictionaries storing the parsed frame data.
@@ -222,7 +220,7 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
     
     Behavior:
         - Parses the input XML file frame by frame.
-        - Each frame's timestamp (`pkt_dts_time`) and key-value pairs are stored in a dictionary (`frameDict`).
+        - Each frame's timestamp (`pkt_*ts_time`) and key-value pairs are stored in a dictionary (`frameDict`).
         - Once the buffer reaches the specified size (`buffSize`), it checks the middle frame's attributes:
           - Color bars are detected if `YMAX > 210`, `YMIN < 10`, and `YDIF < 3.0`.
         - Logs the start and end times of the bars and stops detection once the bars end.
@@ -261,7 +259,7 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 
 def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,frameCount=0,overallFrameFail=0):
 	"""
-    Analyzes video frames from a QCTools report to detect threshold exceedances for specified tags or profiles and logs frame failures.
+    Analyzes video frames from the QCTools report to detect threshold exceedances for specified tags or profiles and logs frame failures.
 
     This function iteratively parses video frames from a QCTools report (`.qctools.xml.gz`) and checks whether the frame attributes exceed user-defined thresholds 
     (either single tags or profiles). Threshold exceedances are logged, and frames can be flagged for further analysis. Optionally, thumbnails of failing frames can be generated.
@@ -270,7 +268,7 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
         args (argparse.Namespace): Parsed command-line arguments, including tag thresholds and options for profile, thumbnail export, etc.
         profile (dict): A dictionary of key-value pairs of tag names and their corresponding threshold values.
         startObj (str): Path to the QCTools report file (.qctools.xml.gz)
-        pkt (str): Key used to identify the packet timestamp (pkt_dts_time) in the XML frames.
+        pkt (str): Key used to identify the pkt_*ts_time in the XML frames.
         durationStart (float): The starting time for analyzing frames (in seconds).
         durationEnd (float): The ending time for analyzing frames (in seconds). Can be `None` to process until the end.
         thumbPath (str): Path to save the thumbnail images of frames exceeding thresholds.
@@ -441,7 +439,7 @@ def main():
 	"""
     Main function that parses QCTools XML files, applies analysis, and optionally exports thumbnails.
 
-    This function handles command-line arguments to process a QCTools report (XML.gz format), extract frame data, 
+    This function handles command-line arguments to process a QCTools report, extract frame data from the XML, 
     apply threshold analysis for broadcast values, optionally detect color bars, and export analysis results to 
     the console or thumbnails.
 
