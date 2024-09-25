@@ -351,6 +351,20 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 			elem.clear() # we're done with that element so let's get it outta memory
 	return kbeyond, frameCount, overallFrameFail
 
+def detectBitdepth(startObj):
+	bit_depth_10 = False
+	with gzip.open(startObj) as xml:
+		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): # iterparse the xml doc
+			if elem.attrib['media_type'] == "video": # get just the video frames
+				for t in list(elem):    # iterating through each attribute for each element
+					if 'YMAX' in t.attrib['key']:
+						if float(t.attrib['value']) > 250:
+							bit_depth_10 = True
+							break
+						else:
+							print(f"DEBUGGING: The value is {t.attrib['value']}")
+	return bit_depth_10
+
 
 # This function is admittedly very ugly, but what it puts out is very pretty. Need to revamp 	
 def printresults(kbeyond, frameCount, overallFrameFail):
@@ -505,6 +519,11 @@ def main():
 				if match:
 					pkt = match.group()
 					break
+
+	bit_depth_10 = False
+	bit_depth_10 = detectBitdepth(startObj)
+
+	print(f"The value of bit depth is {bit_depth_10}")
 
 	# set the start and end duration times
 	if args.bd:
