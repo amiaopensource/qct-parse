@@ -439,7 +439,7 @@ def main():
         9. Handle errors or invalid input (e.g., missing thumbnail export flag but specifying a path).
 
     Example usage:
-        python script.py -i sample.qctools.xml.gz -t SATMAX -o 5.0 -u -5.0 -te
+        python qct-parse.py -i sample.qctools.xml.gz -t SATMAX -o 5.0 -u -5.0 -te
 
     Returns:
         None: The function processes the XML file, performs analysis, and optionally exports thumbnails and prints results to the console.
