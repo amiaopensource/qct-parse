@@ -361,8 +361,6 @@ def detectBitdepth(startObj):
 						if float(t.attrib['value']) > 250:
 							bit_depth_10 = True
 							break
-						else:
-							print(f"DEBUGGING: The value is {t.attrib['value']}")
 	return bit_depth_10
 
 
@@ -522,8 +520,6 @@ def main():
 
 	bit_depth_10 = False
 	bit_depth_10 = detectBitdepth(startObj)
-
-	print(f"The value of bit depth is {bit_depth_10}")
 
 	# set the start and end duration times
 	if args.bd:
