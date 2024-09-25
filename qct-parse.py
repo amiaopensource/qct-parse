@@ -353,7 +353,6 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 	return kbeyond, frameCount, overallFrameFail
 
 def detectBitdepth(startObj,pkt,framesList,buffSize):
-	start_time = time.time()
 	bit_depth_10 = False
 	with gzip.open(startObj) as xml:
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): # iterparse the xml doc
@@ -372,16 +371,8 @@ def detectBitdepth(startObj,pkt,framesList,buffSize):
 					bufferRange = list(range(0, buffSize))
 					if float(framesList[middleFrame]['YMAX']) > 250:
 						bit_depth_10 = True
-						end_time = time.time()
-						total_time = end_time - start_time
-						formatted_total_time = time.strftime("%H:%M:%S", time.gmtime(total_time))
 						break
 			elem.clear() # we're done with that element so let's get it outta memory
-			
-	if not bit_depth_10:
-		end_time = time.time()
-		total_time = end_time - start_time
-		formatted_total_time = time.strftime("%H:%M:%S", time.gmtime(total_time))
 
 	return bit_depth_10
 
@@ -540,7 +531,7 @@ def main():
 					pkt = match.group()
 					break
 
-	bit_depth_10 = False
+	# Determine if video values are 10 bit depth 
 	bit_depth_10 = detectBitdepth(startObj,pkt,framesList,buffSize)
 
 	# set the start and end duration times
