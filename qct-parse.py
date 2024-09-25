@@ -15,6 +15,7 @@ import gc				# not currently used
 import math				# used for rounding up buffer half
 import sys				# system stuff
 import re				# can't spell parse without re fam
+import time
 from distutils import spawn # dependency checking
 
 
@@ -352,6 +353,7 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 	return kbeyond, frameCount, overallFrameFail
 
 def detectBitdepth(startObj):
+	start_time = time.time()
 	bit_depth_10 = False
 	with gzip.open(startObj) as xml:
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): # iterparse the xml doc
@@ -360,7 +362,15 @@ def detectBitdepth(startObj):
 					if 'YMAX' in t.attrib['key']:
 						if float(t.attrib['value']) > 250:
 							bit_depth_10 = True
+							end_time = time.time()
+							total_time = end_time - start_time
+							formatted_total_time = time.strftime("%H:%M:%S", time.gmtime(total_time))
 							break
+	if not bit_depth_10:
+		end_time = time.time()
+		total_time = end_time - start_time
+		formatted_total_time = time.strftime("%H:%M:%S", time.gmtime(total_time))
+	print(formatted_total_time)
 	return bit_depth_10
 
 
