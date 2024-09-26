@@ -516,16 +516,17 @@ def main():
 					pkt = match.group()
 					break
 
-	# Determine if video values are 10 bit depth 
-	bit_depth_10 = detectBitdepth(startObj,pkt,framesList,buffSize)
-
 	###### Initialize values from the Config Parser
 	profile = {} # init a dictionary where we'll store reference values from our config file
 	# init a list of every tag available in a QCTools Report
 	tagList = ["YMIN","YLOW","YAVG","YHIGH","YMAX","UMIN","ULOW","UAVG","UHIGH","UMAX","VMIN","VLOW","VAVG","VHIGH","VMAX","SATMIN","SATLOW","SATAVG","SATHIGH","SATMAX","HUEMED","HUEAVG","YDIF","UDIF","VDIF","TOUT","VREP","BRNG","mse_y","mse_u","mse_v","mse_avg","psnr_y","psnr_u","psnr_v","psnr_avg"]
 	if args.p is not None:
+		# Determine if video values are 10 bit depth 
+		bit_depth_10 = detectBitdepth(startObj,pkt,framesList,buffSize)
+		# setup configparser
 		config = configparser.RawConfigParser(allow_no_value=True)
 		dn, fn = os.path.split(os.path.abspath(__file__)) # grip the dir where ~this script~ is located, also where config.txt should be located
+		# assign config based on bit depth of tag values 
 		if bit_depth_10:
 			config.read(os.path.join(dn,"qct-parse_10bit_config.txt")) # read in the config file
 		else:
