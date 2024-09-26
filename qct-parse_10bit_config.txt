@@ -1,0 +1,86 @@
+# 10bit values
+
+[default]
+YLOW: 64
+YHIGH: 940
+ULOW: 64
+UHIGH: 940
+VLOW: 0
+VHIGH: 1023
+SATMAX: 181.02
+TOUT: 0.009
+VREP: 0.03
+
+#Higher Tolerance for Peaking
+[highTolerance]
+YLOW: 40
+YMAX: 1000
+UMIN: 64
+UMAX: 1000
+VMIN: 0
+VMAX: 1023
+SATMAX: 181.02
+TOUT: 0.009
+VREP: 0.03
+
+#Medium Tolerance for Peaking
+[midTolerance]
+YLOW: 40
+YMAX: 980
+UMIN: 64
+UMAX: 980
+VMIN: 0
+VMAX: 1023
+SATMAX: 181.02
+TOUT: 0.009
+VREP: 0.03
+
+#Low Tolerance for Peaking
+[lowTolerance]
+YLOW: 64
+YMAX: 940
+UMIN: 64
+UMAX: 940
+VMIN: 0
+VMAX: 1023
+SATMAX: 181.02
+TOUT: 0.009
+VREP: 0.03
+
+[fullTagList]
+YMIN:
+YLOW:
+YAVG:
+YHIGH
+YMAX:
+UMIN:
+ULOW:
+UAVG:
+UHIGH:
+UMAX:
+VMIN:
+VLOW:
+VAVG:
+VHIGH:
+VMAX:
+SATMIN:
+SATLOW:
+SATAVG:
+SATHIGH:
+SATMAX:
+HUEMED:
+HUEAVG:
+YDIF:
+UDIF:
+VDIF:
+TOUT:
+VREP:
+BRNG:
+mse_y:
+mse_u:
+mse_v:
+mse_avg:
+psnr_y:
+psnr_u:
+psnr_v:
+psnr_avg:

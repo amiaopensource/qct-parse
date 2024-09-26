@@ -488,22 +488,7 @@ def main():
 	args = parser.parse_args()
 	
 	
-	###### Initialize values from the Config Parser
-	profile = {} # init a dictionary where we'll store reference values from our config file
-	# init a list of every tag available in a QCTools Report
-	tagList = ["YMIN","YLOW","YAVG","YHIGH","YMAX","UMIN","ULOW","UAVG","UHIGH","UMAX","VMIN","VLOW","VAVG","VHIGH","VMAX","SATMIN","SATLOW","SATAVG","SATHIGH","SATMAX","HUEMED","HUEAVG","YDIF","UDIF","VDIF","TOUT","VREP","BRNG","mse_y","mse_u","mse_v","mse_avg","psnr_y","psnr_u","psnr_v","psnr_avg"]
-	if args.p is not None:
-		config = configparser.RawConfigParser(allow_no_value=True)
-		dn, fn = os.path.split(os.path.abspath(__file__)) # grip the dir where ~this script~ is located, also where config.txt should be located
-		config.read(os.path.join(dn,"qct-parse_config.txt")) # read in the config file
-		template = args.p # get the profile/ section name from CLI
-		for t in tagList: 			# loop thru every tag available and 
-			try: 					# see if it's in the config section
-				profile[t.replace("_",".")] = config.get(template,t) # if it is, replace _ necessary for config file with . which xml attributes use, assign the value in config
-			except: # if no config tag exists, do nothing so we can move faster
-				pass
-	
-	###### Initialize some other stuff ######
+	##### Initialize variables and buffers ######
 	startObj = args.i.replace("\\","/")
 	buffSize = int(args.buff)   # cast the input buffer as an integer
 	if buffSize%2 == 0:
@@ -533,6 +518,24 @@ def main():
 
 	# Determine if video values are 10 bit depth 
 	bit_depth_10 = detectBitdepth(startObj,pkt,framesList,buffSize)
+
+	###### Initialize values from the Config Parser
+	profile = {} # init a dictionary where we'll store reference values from our config file
+	# init a list of every tag available in a QCTools Report
+	tagList = ["YMIN","YLOW","YAVG","YHIGH","YMAX","UMIN","ULOW","UAVG","UHIGH","UMAX","VMIN","VLOW","VAVG","VHIGH","VMAX","SATMIN","SATLOW","SATAVG","SATHIGH","SATMAX","HUEMED","HUEAVG","YDIF","UDIF","VDIF","TOUT","VREP","BRNG","mse_y","mse_u","mse_v","mse_avg","psnr_y","psnr_u","psnr_v","psnr_avg"]
+	if args.p is not None:
+		config = configparser.RawConfigParser(allow_no_value=True)
+		dn, fn = os.path.split(os.path.abspath(__file__)) # grip the dir where ~this script~ is located, also where config.txt should be located
+		if bit_depth_10:
+			config.read(os.path.join(dn,"qct-parse_10bit_config.txt")) # read in the config file
+		else:
+			config.read(os.path.join(dn,"qct-parse_8bit_config.txt")) # read in the config file
+		template = args.p # get the profile/ section name from CLI
+		for t in tagList: 			# loop thru every tag available and 
+			try: 					# see if it's in the config section
+				profile[t.replace("_",".")] = config.get(template,t) # if it is, replace _ necessary for config file with . which xml attributes use, assign the value in config
+			except: # if no config tag exists, do nothing so we can move faster
+				pass
 
 	# set the start and end duration times
 	if args.bd:
