@@ -15,6 +15,7 @@ import gc				# not currently used
 import math				# used for rounding up buffer half
 import sys				# system stuff
 import re				# can't spell parse without re fam
+import time
 from distutils import spawn # dependency checking
 
 
@@ -351,6 +352,30 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 			elem.clear() # we're done with that element so let's get it outta memory
 	return kbeyond, frameCount, overallFrameFail
 
+def detectBitdepth(startObj,pkt,framesList,buffSize):
+	bit_depth_10 = False
+	with gzip.open(startObj) as xml:
+		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): # iterparse the xml doc
+			if elem.attrib['media_type'] == "video": # get just the video frames
+				frame_pkt_dts_time = elem.attrib[pkt] # get the timestamps for the current frame we're looking at
+				frameDict = {}  # start an empty dict for the new frame
+				frameDict[pkt] = frame_pkt_dts_time  # give the dict the timestamp, which we have now
+				for t in list(elem):    # iterating through each attribute for each element
+					keySplit = t.attrib['key'].split(".")   # split the names by dots 
+					keyName = str(keySplit[-1])             # get just the last word for the key name
+					frameDict[keyName] = t.attrib['value']	# add each attribute to the frame dictionary
+				framesList.append(frameDict)
+				middleFrame = int(round(float(len(framesList))/2))	# i hate this calculation, but it gets us the middle index of the list as an integer
+				if len(framesList) == buffSize:	# wait till the buffer is full to start detecting bars
+					## This is where the bars detection magic actually happens
+					bufferRange = list(range(0, buffSize))
+					if float(framesList[middleFrame]['YMAX']) > 250:
+						bit_depth_10 = True
+						break
+			elem.clear() # we're done with that element so let's get it outta memory
+
+	return bit_depth_10
+
 
 # This function is admittedly very ugly, but what it puts out is very pretty. Need to revamp 	
 def printresults(kbeyond, frameCount, overallFrameFail):
@@ -463,22 +488,7 @@ def main():
 	args = parser.parse_args()
 	
 	
-	###### Initialize values from the Config Parser
-	profile = {} # init a dictionary where we'll store reference values from our config file
-	# init a list of every tag available in a QCTools Report
-	tagList = ["YMIN","YLOW","YAVG","YHIGH","YMAX","UMIN","ULOW","UAVG","UHIGH","UMAX","VMIN","VLOW","VAVG","VHIGH","VMAX","SATMIN","SATLOW","SATAVG","SATHIGH","SATMAX","HUEMED","HUEAVG","YDIF","UDIF","VDIF","TOUT","VREP","BRNG","mse_y","mse_u","mse_v","mse_avg","psnr_y","psnr_u","psnr_v","psnr_avg"]
-	if args.p is not None:
-		config = configparser.RawConfigParser(allow_no_value=True)
-		dn, fn = os.path.split(os.path.abspath(__file__)) # grip the dir where ~this script~ is located, also where config.txt should be located
-		config.read(os.path.join(dn,"qct-parse_config.txt")) # read in the config file
-		template = args.p # get the profile/ section name from CLI
-		for t in tagList: 			# loop thru every tag available and 
-			try: 					# see if it's in the config section
-				profile[t.replace("_",".")] = config.get(template,t) # if it is, replace _ necessary for config file with . which xml attributes use, assign the value in config
-			except: # if no config tag exists, do nothing so we can move faster
-				pass
-	
-	###### Initialize some other stuff ######
+	##### Initialize variables and buffers ######
 	startObj = args.i.replace("\\","/")
 	buffSize = int(args.buff)   # cast the input buffer as an integer
 	if buffSize%2 == 0:
@@ -505,6 +515,28 @@ def main():
 				if match:
 					pkt = match.group()
 					break
+
+	###### Initialize values from the Config Parser
+	profile = {} # init a dictionary where we'll store reference values from our config file
+	# init a list of every tag available in a QCTools Report
+	tagList = ["YMIN","YLOW","YAVG","YHIGH","YMAX","UMIN","ULOW","UAVG","UHIGH","UMAX","VMIN","VLOW","VAVG","VHIGH","VMAX","SATMIN","SATLOW","SATAVG","SATHIGH","SATMAX","HUEMED","HUEAVG","YDIF","UDIF","VDIF","TOUT","VREP","BRNG","mse_y","mse_u","mse_v","mse_avg","psnr_y","psnr_u","psnr_v","psnr_avg"]
+	if args.p is not None:
+		# Determine if video values are 10 bit depth 
+		bit_depth_10 = detectBitdepth(startObj,pkt,framesList,buffSize)
+		# setup configparser
+		config = configparser.RawConfigParser(allow_no_value=True)
+		dn, fn = os.path.split(os.path.abspath(__file__)) # grip the dir where ~this script~ is located, also where config.txt should be located
+		# assign config based on bit depth of tag values 
+		if bit_depth_10:
+			config.read(os.path.join(dn,"qct-parse_10bit_config.txt")) # read in the config file
+		else:
+			config.read(os.path.join(dn,"qct-parse_8bit_config.txt")) # read in the config file
+		template = args.p # get the profile/ section name from CLI
+		for t in tagList: 			# loop thru every tag available and 
+			try: 					# see if it's in the config section
+				profile[t.replace("_",".")] = config.get(template,t) # if it is, replace _ necessary for config file with . which xml attributes use, assign the value in config
+			except: # if no config tag exists, do nothing so we can move faster
+				pass
 
 	# set the start and end duration times
 	if args.bd:
