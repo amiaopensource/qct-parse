@@ -245,20 +245,20 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 					keyName = str(keySplit[-1])             # get just the last word for the key name
 					frameDict[keyName] = t.attrib['value']	# add each attribute to the frame dictionary
 				framesList.append(frameDict)
+				middleFrame = int(round(float(len(framesList))/2))	# i hate this calculation, but it gets us the middle index of the list as an integer
+				if len(framesList) == buffSize:	# wait till the buffer is full to start detecting bars
+					## This is where the bars detection magic actually happens
+					# bufferRange = list(range(0, buffSize))
+					if float(framesList[middleFrame]['YMAX']) > 800 and float(framesList[middleFrame]['YMIN']) < 10 and float(framesList[middleFrame]['YDIF']) < 10:
+						if durationStart == "":
+							durationStart = float(framesList[middleFrame][pkt])
+							print("Bars start at " + str(framesList[middleFrame][pkt]) + " (" + dts2ts(framesList[middleFrame][pkt]) + ")")							
+						durationEnd = float(framesList[middleFrame][pkt])
+					else:
+						if durationStart != "" and durationEnd != "" and durationEnd - durationStart > 2:
+							print("Bars ended at " + str(framesList[middleFrame][pkt]) + " (" + dts2ts(framesList[middleFrame][pkt]) + ")")							
+							break
 			elem.clear() # we're done with that element so let's get it outta memory
-	frame_count = 0
-	for frameDict in framesList:
-		frame_count += 1
-		if frame_count % 25 == 0:
-			if float(frameDict['YMAX']) > 800 and float(frameDict['YMIN']) < 10 and float(frameDict['YDIF']) < 7:
-				if durationStart == "":
-					durationStart = float(frameDict[pkt])
-					print("Bars start at " + str(frameDict[pkt]) + " (" + dts2ts(frameDict[pkt]) + ")")
-				durationEnd = float(frameDict[pkt])
-			else:
-				if durationStart != "" and durationEnd != "" and durationEnd - durationStart > 2:
-					print("Bars ended at " + str(frameDict[pkt]) + " (" + dts2ts(frameDict[pkt]) + ")\n")
-					break
 	return durationStart, durationEnd
 
 
@@ -498,7 +498,7 @@ def main():
 	overcount = 0	# init count of overs
 	undercount = 0	# init count of unders
 	count = 0		# init total frames counter
-	framesList = [] # init framesList 
+	framesList = collections.deque(maxlen=buffSize) # init framesList 
 	thumbDelay = int(args.ted)	# get a seconds number for the delay in the original file btw exporting tags
 	parentDir = os.path.dirname(startObj)
 	baseName = os.path.basename(startObj)
