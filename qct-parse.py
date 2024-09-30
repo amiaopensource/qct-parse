@@ -573,7 +573,7 @@ def main():
 		print("")
 		print("Starting Bars Detection on " + baseName)
 		print("")
-		durationStart,durationEnd = detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,)
+		durationStart,durationEnd = detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize)
 	
 
 	######## Iterate Through the XML for General Analysis ########
