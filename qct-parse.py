@@ -200,7 +200,7 @@ def printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString):
 	
 
 # detect bars	
-def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
+def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,bit_depth_10):
 	"""
     Detects color bars in a video by analyzing frames within a buffered window and logging the start and end times of the bars.
 
@@ -234,6 +234,15 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
         - "Bars start at [timestamp] ([formatted timestamp])"
         - "Bars ended at [timestamp] ([formatted timestamp])"
     """
+	if bit_depth_10:
+		YMAX_thresh = 800
+		YMIN_thresh = 10
+		YDIF_thresh = 10
+	else:
+		YMAX_thresh = 210
+		YMIN_thresh = 10
+		YDIF_thresh = 3.0
+	
 	with gzip.open(startObj) as xml:
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): # iterparse the xml doc
 			if elem.attrib['media_type'] == "video": # get just the video frames
@@ -248,17 +257,19 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 				middleFrame = int(round(float(len(framesList))/2))	# i hate this calculation, but it gets us the middle index of the list as an integer
 				if len(framesList) == buffSize:	# wait till the buffer is full to start detecting bars
 					## This is where the bars detection magic actually happens
-					bufferRange = list(range(0, buffSize))
-					if float(framesList[middleFrame]['YMAX']) > 210 and float(framesList[middleFrame]['YMIN']) < 10 and float(framesList[middleFrame]['YDIF']) < 3.0:
-						if durationStart == "":
-							durationStart = float(framesList[middleFrame][pkt])
-							print("Bars start at " + str(framesList[middleFrame][pkt]) + " (" + dts2ts(framesList[middleFrame][pkt]) + ")")							
-						durationEnd = float(framesList[middleFrame][pkt])
+					# Check conditions
+					if (float(framesList[middleFrame]['YMAX']) > YMAX_thresh and 
+						float(framesList[middleFrame]['YMIN']) < YMIN_thresh and 
+						float(framesList[middleFrame]['YDIF']) < YDIF_thresh):
+							if durationStart == "":
+								durationStart = float(framesList[middleFrame][pkt])
+								print("Bars start at " + str(framesList[middleFrame][pkt]) + " (" + dts2ts(framesList[middleFrame][pkt]) + ")")							
+							durationEnd = float(framesList[middleFrame][pkt])
 					else:
-						print("Bars ended at " + str(framesList[middleFrame][pkt]) + " (" + dts2ts(framesList[middleFrame][pkt]) + ")")							
-						break
+						if durationStart != "" and durationEnd != "" and durationEnd - durationStart > 2:
+							print("Bars ended at " + str(framesList[middleFrame][pkt]) + " (" + dts2ts(framesList[middleFrame][pkt]) + ")")							
+							break
 			elem.clear() # we're done with that element so let's get it outta memory
-	return durationStart, durationEnd
 
 
 def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,frameCount=0,overallFrameFail=0):
@@ -487,7 +498,6 @@ def main():
 	parser.add_argument('-q','--quiet',dest='q',action='store_true',default=False, help="hide ffmpeg output from console window")
 	args = parser.parse_args()
 	
-	
 	##### Initialize variables and buffers ######
 	startObj = args.i.replace("\\","/")
 	buffSize = int(args.buff)   # cast the input buffer as an integer
@@ -497,8 +507,7 @@ def main():
 	overcount = 0	# init count of overs
 	undercount = 0	# init count of unders
 	count = 0		# init total frames counter
-	framesList = collections.deque(maxlen=buffSize)		# init holding object for holding all frame data in a circular buffer. 
-	bdFramesList = collections.deque(maxlen=buffSize) 	# init holding object for holding all frame data in a circular buffer. 
+	framesList = collections.deque(maxlen=buffSize) # init framesList 
 	thumbDelay = int(args.ted)	# get a seconds number for the delay in the original file btw exporting tags
 	parentDir = os.path.dirname(startObj)
 	baseName = os.path.basename(startObj)
@@ -517,12 +526,13 @@ def main():
 					break
 
 	###### Initialize values from the Config Parser
-	profile = {} # init a dictionary where we'll store reference values from our config file
+	# Determine if video values are 10 bit depth 
+	bit_depth_10 = detectBitdepth(startObj,pkt,framesList,buffSize)
+	# init a dictionary where we'll store reference values from our config file
+	profile = {} 
 	# init a list of every tag available in a QCTools Report
 	tagList = ["YMIN","YLOW","YAVG","YHIGH","YMAX","UMIN","ULOW","UAVG","UHIGH","UMAX","VMIN","VLOW","VAVG","VHIGH","VMAX","SATMIN","SATLOW","SATAVG","SATHIGH","SATMAX","HUEMED","HUEAVG","YDIF","UDIF","VDIF","TOUT","VREP","BRNG","mse_y","mse_u","mse_v","mse_avg","psnr_y","psnr_u","psnr_v","psnr_avg"]
 	if args.p is not None:
-		# Determine if video values are 10 bit depth 
-		bit_depth_10 = detectBitdepth(startObj,pkt,framesList,buffSize)
 		# setup configparser
 		config = configparser.RawConfigParser(allow_no_value=True)
 		dn, fn = os.path.split(os.path.abspath(__file__)) # grip the dir where ~this script~ is located, also where config.txt should be located
@@ -573,7 +583,7 @@ def main():
 		print("")
 		print("Starting Bars Detection on " + baseName)
 		print("")
-		durationStart,durationEnd = detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize)
+		detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,bit_depth_10)
 	
 
 	######## Iterate Through the XML for General Analysis ########
@@ -590,7 +600,6 @@ def main():
 	# do some maths for the printout
 	if args.o or args.u or args.p is not None:
 		printresults(kbeyond,frameCount,overallFrameFail)
-	
 	return
 
 dependencies()	
