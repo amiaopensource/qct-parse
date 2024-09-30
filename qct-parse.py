@@ -248,7 +248,6 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 				middleFrame = int(round(float(len(framesList))/2))	# i hate this calculation, but it gets us the middle index of the list as an integer
 				if len(framesList) == buffSize:	# wait till the buffer is full to start detecting bars
 					## This is where the bars detection magic actually happens
-					# bufferRange = list(range(0, buffSize))
 					if float(framesList[middleFrame]['YMAX']) > 800 and float(framesList[middleFrame]['YMIN']) < 10 and float(framesList[middleFrame]['YDIF']) < 10:
 						if durationStart == "":
 							durationStart = float(framesList[middleFrame][pkt])
@@ -259,7 +258,6 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 							print("Bars ended at " + str(framesList[middleFrame][pkt]) + " (" + dts2ts(framesList[middleFrame][pkt]) + ")")							
 							break
 			elem.clear() # we're done with that element so let's get it outta memory
-	return durationStart, durationEnd
 
 
 def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,frameCount=0,overallFrameFail=0):
@@ -488,7 +486,6 @@ def main():
 	parser.add_argument('-q','--quiet',dest='q',action='store_true',default=False, help="hide ffmpeg output from console window")
 	args = parser.parse_args()
 	
-	
 	##### Initialize variables and buffers ######
 	startObj = args.i.replace("\\","/")
 	buffSize = int(args.buff)   # cast the input buffer as an integer
@@ -573,7 +570,7 @@ def main():
 		print("")
 		print("Starting Bars Detection on " + baseName)
 		print("")
-		durationStart,durationEnd = detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,)
+		detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize)
 	
 
 	######## Iterate Through the XML for General Analysis ########
@@ -590,7 +587,6 @@ def main():
 	# do some maths for the printout
 	if args.o or args.u or args.p is not None:
 		printresults(kbeyond,frameCount,overallFrameFail)
-	
 	return
 
 dependencies()	
