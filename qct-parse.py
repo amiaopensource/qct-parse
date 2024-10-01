@@ -615,9 +615,7 @@ def main():
 	
 	######## Iterate Through the XML for Bars detection ########
 	if args.bd:
-		print("")
-		print("Starting Bars Detection on " + baseName)
-		print("")
+		print(f"\nStarting Bars Detection on {baseName}\n")
 		durationStart, durationEnd = detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,bit_depth_10)
 		if args.be and durationStart != "" and durationEnd != "":
 			maxBarsDict = evalBars(startObj,pkt,durationStart,durationEnd,framesList,buffSize)
@@ -651,13 +649,10 @@ def main():
 				pass
 	
 	######## Iterate Through the XML for General Analysis ########
-	print("")
-	print("Starting Analysis on " + baseName)
-	print("")
+	print(f"\nStarting Analysis on {baseName}\n")
 	kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
 	
-	print(f"\nFinished Processing File: " + baseName + ".qctools.xml.gz")
-	print("")
+	print(f"\nFinished Processing File: {baseName}.qctools.xml.gz\n")
 
 	# do some maths for the printout
 	if args.o or args.u or args.p is not None:
