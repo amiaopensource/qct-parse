@@ -34,6 +34,8 @@ You can run a single tag against a supplied value from the CLI or run multiple t
   -de, --durationEnd        | the duration in seconds to stop analysis (ffmpeg equivalent -t)
                         
   -bd, --barsDetection      | bar detection on/ off, default off
+
+  -be, --barsEvaluation     | if bars are found, use peak values from color bars as 'profile'
   
   -pr, --print               | print over/under frame data to console window, default off
   

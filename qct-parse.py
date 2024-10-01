@@ -270,6 +270,7 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,b
 							print("Bars ended at " + str(framesList[middleFrame][pkt]) + " (" + dts2ts(framesList[middleFrame][pkt]) + ")")							
 							break
 			elem.clear() # we're done with that element so let's get it outta memory
+	return durationStart, durationEnd
 
 
 def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,frameCount=0,overallFrameFail=0):
@@ -348,7 +349,7 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 						frameOver, thumbDelay = threshFinder(framesList[-1],args,startObj,pkt,tag,over,thumbPath,thumbDelay)
 						if frameOver is True:
 							kbeyond[tag] = kbeyond[tag] + 1 # note the over in the keyover dictionary
-					elif args.p is not None: # if we're using a profile
+					elif args.p or args.be is not None: # if we're using a profile or color bars evaluations
 						for k,v in profile.items():
 							tag = k
 							over = float(v)
@@ -386,6 +387,54 @@ def detectBitdepth(startObj,pkt,framesList,buffSize):
 			elem.clear() # we're done with that element so let's get it outta memory
 
 	return bit_depth_10
+
+
+def evalBars(startObj,pkt,durationStart,durationEnd,framesList,buffSize):
+	# Define the keys for which you want to calculate the average
+	keys_to_check = ['YMAX', 'YMIN', 'UMIN', 'UMAX', 'VMIN', 'VMAX', 'SATMAX', 'SATMIN']
+	# Initialize a dictionary to store the highest values for each key
+	maxBarsDict = {}
+	# adds the list keys_to_check as keys to a dictionary
+	for key_being_checked in keys_to_check:
+		# assign 'dummy' threshold to be overwritten
+		if "MAX" in key_being_checked:
+			maxBarsDict[key_being_checked] = 0
+		elif "MIN" in key_being_checked:
+			maxBarsDict[key_being_checked] = 1023
+	
+	with gzip.open(startObj) as xml:
+		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): # iterparse the xml doc
+			if elem.attrib['media_type'] == "video": # get just the video frames
+				frame_pkt_dts_time = elem.attrib[pkt] # get the timestamps for the current frame we're looking at
+				if frame_pkt_dts_time >= str(durationStart): 	# only work on frames that are after the start time   # only work on frames that are after the start time
+					if float(frame_pkt_dts_time) > durationEnd:        # only work on frames that are before the end time
+						break
+					frameDict = {}  # start an empty dict for the new frame
+					frameDict[pkt] = frame_pkt_dts_time  # give the dict the timestamp, which we have now
+					for t in list(elem):    # iterating through each attribute for each element
+						keySplit = t.attrib['key'].split(".")   # split the names by dots 
+						keyName = str(keySplit[-1])             # get just the last word for the key name
+						frameDict[keyName] = t.attrib['value']	# add each attribute to the frame dictionary
+					framesList.append(frameDict)
+					middleFrame = int(round(float(len(framesList))/2))	# i hate this calculation, but it gets us the middle index of the list as an integer
+					if len(framesList) == buffSize:	# wait till the buffer is full to start detecting bars
+						## This is where the bars detection magic actually happens
+						for colorbar_key in keys_to_check:
+							if colorbar_key in frameDict:
+								if "MAX" in colorbar_key:
+									# Convert the value to float and compare it with the current highest value
+									value = float(frameDict[colorbar_key])
+									if value > maxBarsDict[colorbar_key]:
+										maxBarsDict[colorbar_key] = value
+								elif "MIN" in colorbar_key:
+									# Convert the value to float and compare it with the current highest value
+									value = float(frameDict[colorbar_key])
+									if value < maxBarsDict[colorbar_key]:
+										maxBarsDict[colorbar_key] = value
+								# Convert highest values to integer
+								maxBarsDict = {colorbar_key: int(value) for colorbar_key, value in maxBarsDict.items()}
+							
+		return maxBarsDict
 
 
 # This function is admittedly very ugly, but what it puts out is very pretty. Need to revamp 	
@@ -494,6 +543,7 @@ def main():
 	parser.add_argument('-ds','--durationStart',dest='ds',default=0, help="the duration in seconds to start analysis")
 	parser.add_argument('-de','--durationEnd',dest='de',default=99999999, help="the duration in seconds to stop analysis")
 	parser.add_argument('-bd','--barsDetection',dest='bd',action ='store_true',default=False, help="turns Bar Detection on and off")
+	parser.add_argument('-be','--barsEvaluation',dest='be',action ='store_true',default=False, help="turns Color Bar Evaluation on and off")
 	parser.add_argument('-pr','--print',dest='pr',action='store_true',default=False, help="print over/under frame data to console window")
 	parser.add_argument('-q','--quiet',dest='q',action='store_true',default=False, help="hide ffmpeg output from console window")
 	args = parser.parse_args()
@@ -532,21 +582,6 @@ def main():
 	profile = {} 
 	# init a list of every tag available in a QCTools Report
 	tagList = ["YMIN","YLOW","YAVG","YHIGH","YMAX","UMIN","ULOW","UAVG","UHIGH","UMAX","VMIN","VLOW","VAVG","VHIGH","VMAX","SATMIN","SATLOW","SATAVG","SATHIGH","SATMAX","HUEMED","HUEAVG","YDIF","UDIF","VDIF","TOUT","VREP","BRNG","mse_y","mse_u","mse_v","mse_avg","psnr_y","psnr_u","psnr_v","psnr_avg"]
-	if args.p is not None:
-		# setup configparser
-		config = configparser.RawConfigParser(allow_no_value=True)
-		dn, fn = os.path.split(os.path.abspath(__file__)) # grip the dir where ~this script~ is located, also where config.txt should be located
-		# assign config based on bit depth of tag values 
-		if bit_depth_10:
-			config.read(os.path.join(dn,"qct-parse_10bit_config.txt")) # read in the config file
-		else:
-			config.read(os.path.join(dn,"qct-parse_8bit_config.txt")) # read in the config file
-		template = args.p # get the profile/ section name from CLI
-		for t in tagList: 			# loop thru every tag available and 
-			try: 					# see if it's in the config section
-				profile[t.replace("_",".")] = config.get(template,t) # if it is, replace _ necessary for config file with . which xml attributes use, assign the value in config
-			except: # if no config tag exists, do nothing so we can move faster
-				pass
 
 	# set the start and end duration times
 	if args.bd:
@@ -583,20 +618,47 @@ def main():
 		print("")
 		print("Starting Bars Detection on " + baseName)
 		print("")
-		detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,bit_depth_10)
+		durationStart, durationEnd = detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,bit_depth_10)
+		if args.be and durationStart != "" and durationEnd != "":
+			maxBarsDict = evalBars(startObj,pkt,durationStart,durationEnd,framesList,buffSize)
+			if maxBarsDict is None:
+				print("\nSomehting went wrong - cannot run colorbars evaluation")
+			else:
+				print("\nColor bars found, comparing color bars thresholds with the rest of the video")
+				durationStart = 0
+				durationEnd = 99999999
+				profile = maxBarsDict
+				kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
+				printresults(kbeyond,frameCount,overallFrameFail)
+		else:
+			durationStart = ""
+			durationEnd = ""
 	
-
+	if args.p is not None:
+		# setup configparser
+		config = configparser.RawConfigParser(allow_no_value=True)
+		dn, fn = os.path.split(os.path.abspath(__file__)) # grip the dir where ~this script~ is located, also where config.txt should be located
+		# assign config based on bit depth of tag values 
+		if bit_depth_10:
+			config.read(os.path.join(dn,"qct-parse_10bit_config.txt")) # read in the config file
+		else:
+			config.read(os.path.join(dn,"qct-parse_8bit_config.txt")) # read in the config file
+		template = args.p # get the profile/ section name from CLI
+		for t in tagList: 			# loop thru every tag available and 
+			try: 					# see if it's in the config section
+				profile[t.replace("_",".")] = config.get(template,t) # if it is, replace _ necessary for config file with . which xml attributes use, assign the value in config
+			except: # if no config tag exists, do nothing so we can move faster
+				pass
+	
 	######## Iterate Through the XML for General Analysis ########
 	print("")
 	print("Starting Analysis on " + baseName)
 	print("")
 	kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
 	
-	
 	print(f"\nFinished Processing File: " + baseName + ".qctools.xml.gz")
 	print("")
-	
-	
+
 	# do some maths for the printout
 	if args.o or args.u or args.p is not None:
 		printresults(kbeyond,frameCount,overallFrameFail)
