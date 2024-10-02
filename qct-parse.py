@@ -345,7 +345,7 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 							over = float(args.o)
 						if args.u:
 							over = float(args.u)
-						# ACTAULLY DO THE THING ONCE FOR EACH TAG
+						# ACTUALLY DO THE THING ONCE FOR EACH TAG
 						frameOver, thumbDelay = threshFinder(framesList[-1],args,startObj,pkt,tag,over,thumbPath,thumbDelay)
 						if frameOver is True:
 							kbeyond[tag] = kbeyond[tag] + 1 # note the over in the keyover dictionary
@@ -665,7 +665,7 @@ def main():
 			if maxBarsDict is None:
 				print("\nSomething went wrong - cannot run colorbars evaluation")
 			else:
-				print("\nNow compairing peak values of color bars to the rest of the video.")
+				print("\nNow comparing peak values of color bars to the rest of the video.")
 				print_peak_colorbars(maxBarsDict)
 				# Reset start and stop time to eval the whole video (color bars won't be flagged because we already have their max values)
 				durationStart = 0
