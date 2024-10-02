@@ -434,6 +434,28 @@ def evalBars(startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 								maxBarsDict = {colorbar_key: int(value) for colorbar_key, value in maxBarsDict.items()}
 							
 		return maxBarsDict
+	
+
+def print_peak_colorbars(maxBarsDict):
+	# ASCI formatting
+	BOLD = "\033[1m"
+	RESET = "\033[0m"
+
+	print("\nReporting frames outside of these thresholds:")
+
+	# Create two lists for even and odd indices
+	tags = list(maxBarsDict.keys())
+	values = list(maxBarsDict.values())
+
+	# Print even-indexed tags and values on the first line
+	for i in range(0, len(tags), 2):
+		print(f"{BOLD}{tags[i]:<6}{RESET} {values[i]:<5}", end="   ")
+	print()  # Move to the next line
+
+	# Print odd-indexed tags and values on the second line
+	for i in range(1, len(tags), 2):
+		print(f"{BOLD}{tags[i]:<6}{RESET} {values[i]:<5}", end="   ")
+	print()  # Move to the next line
 
 
 # Print results from analyzeIt	
@@ -644,9 +666,8 @@ def main():
 				print("\nSomething went wrong - cannot run colorbars evaluation")
 			else:
 				print("\nNow compairing peak values of color bars to the rest of the video.")
-				print("\nReporting frames outside of these thresholds:")
-				for tag, value in maxBarsDict.items():
-					print(tag, value)
+				print_peak_colorbars(maxBarsDict)
+				# Reset start and stop time to eval the whole video (color bars won't be flagged because we already have their max values)
 				durationStart = 0
 				durationEnd = 99999999
 				profile = maxBarsDict
