@@ -16,7 +16,7 @@ import math				# used for rounding up buffer half
 import sys				# system stuff
 import re				# can't spell parse without re fam
 import time
-from distutils import spawn # dependency checking
+import shutil # dependency checking
 
 
 # check that we have required software installed
@@ -32,7 +32,7 @@ def dependencies():
     """
 	depends = ['ffmpeg','ffprobe']
 	for d in depends:
-		if spawn.find_executable(d) is None:
+		if shutil.which(d) is None:
 			print("Buddy, you gotta install " + d)
 			sys.exit()
 	return
@@ -345,7 +345,7 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 							over = float(args.o)
 						if args.u:
 							over = float(args.u)
-						# ACTAULLY DO THE THING ONCE FOR EACH TAG
+						# ACTUALLY DO THE THING ONCE FOR EACH TAG
 						frameOver, thumbDelay = threshFinder(framesList[-1],args,startObj,pkt,tag,over,thumbPath,thumbDelay)
 						if frameOver is True:
 							kbeyond[tag] = kbeyond[tag] + 1 # note the over in the keyover dictionary
@@ -416,7 +416,6 @@ def evalBars(startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 						keyName = str(keySplit[-1])             # get just the last word for the key name
 						frameDict[keyName] = t.attrib['value']	# add each attribute to the frame dictionary
 					framesList.append(frameDict)
-					middleFrame = int(round(float(len(framesList))/2))	# i hate this calculation, but it gets us the middle index of the list as an integer
 					if len(framesList) == buffSize:	# wait till the buffer is full to start detecting bars
 						## This is where the bars detection magic actually happens
 						for colorbar_key in keys_to_check:
@@ -435,57 +434,101 @@ def evalBars(startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 								maxBarsDict = {colorbar_key: int(value) for colorbar_key, value in maxBarsDict.items()}
 							
 		return maxBarsDict
+	
+
+def print_peak_colorbars(maxBarsDict):
+	# ASCI formatting
+	BOLD = "\033[1m"
+	RESET = "\033[0m"
+
+	print("\nReporting frames outside of these thresholds:")
+
+	# Create two lists for even and odd indices
+	tags = list(maxBarsDict.keys())
+	values = list(maxBarsDict.values())
+
+	# Print even-indexed tags and values on the first line
+	for i in range(0, len(tags), 2):
+		print(f"{BOLD}{tags[i]:<6}{RESET} {values[i]:<5}", end="   ")
+	print()  # Move to the next line
+
+	# Print odd-indexed tags and values on the second line
+	for i in range(1, len(tags), 2):
+		print(f"{BOLD}{tags[i]:<6}{RESET} {values[i]:<5}", end="   ")
+	print()  # Move to the next line
 
 
-# This function is admittedly very ugly, but what it puts out is very pretty. Need to revamp 	
+# Print results from analyzeIt	
 def printresults(kbeyond, frameCount, overallFrameFail):
-    """
-    Prints the analysis results of frame data, including counts of frames exceeding thresholds 
-    for various tags and the percentage of total frames that are affected.
+	"""
+	Prints the analysis results of frame data, including counts of frames exceeding thresholds 
+	for various tags and the percentage of total frames that are affected.
 
-    Args:
-        kbeyond (dict): A dictionary where keys are tag names and values are the counts of frames 
-                        that exceed the threshold for each tag.
-        frameCount (int): The total number of frames analyzed.
-        overallFrameFail (int): The number of frames where at least one tag exceeds its threshold.
+	Args:
+		kbeyond (dict): A dictionary where keys are tag names and values are the counts of frames 
+						that exceed the threshold for each tag.
+		frameCount (int): The total number of frames analyzed.
+		overallFrameFail (int): The number of frames where at least one tag exceeds its threshold.
 
-    Prints:
-        - The total number of frames analyzed.
-        - A breakdown of frame counts for each tag in `kbeyond` and the corresponding percentage 
-          of the total frames that exceeded the tag's threshold.
-        - The overall count and percentage of frames that failed at least one threshold.
+	Prints:
+		- The total number of frames analyzed.
+		- A breakdown of frame counts for each tag in `kbeyond` and the corresponding percentage 
+			of the total frames that exceeded the tag's threshold.
+		- The overall count and percentage of frames that failed at least one threshold.
 
-    Notes:
-        - If `frameCount` is zero, it prints "TotalFrames: 0" and returns early.
-        - Percentages are formatted as whole numbers (e.g., "100"), two decimal places 
-          (e.g., "12.34"), or "<0.01" for values less than 0.01%.
-    """
-    def format_percentage(value):
-        percent = value * 100
-        if percent == 100:
-            return "100"
-        elif percent == 0:
-            return "0"
-        elif percent < 0.01:
-            return "<0.01"
-        else:
-            return f"{percent:.2f}"
+	Notes:
+		- If `frameCount` is zero, it prints "TotalFrames: 0" and returns early.
+		- Percentages are formatted as whole numbers (e.g., "100"), two decimal places 
+			(e.g., "12.34"), or "<0.01" for values less than 0.01%.
+	"""
+	# Define ANSI escape codes for color and formatting
+	BOLD = "\033[1m"
+	UNDERLINE = "\033[4m"
+	RESET = "\033[0m"
 
-    if frameCount == 0:
-        print("TotalFrames:\t0")
-        return
+	RED = "\033[91m"
+	YELLOW = "\033[93m"
+	GREEN = "\033[92m"
 
-    print(f"\nTotalFrames:\t{frameCount}\n")
-    print("By Tag:\n")
+	def format_percentage(value):
+		percent = value * 100
+		if percent == 100:
+			return "100"
+		elif percent == 0:
+			return "0"
+		elif percent < 0.01:
+			return "<0.01"
+		else:
+			return f"{percent:.2f}"
 
-    for tag, count in kbeyond.items():
-        percent_over_string = format_percentage(count / frameCount)
-        print(f"{tag}:\t{count}\t{percent_over_string}\t% of the total # of frames\n")
+	def color_percentage(value):
+		percent = value * 100
+		if percent > 10:
+			return RED
+		elif percent > 1:
+			return YELLOW
+		else:
+			return GREEN
 
-    print("Overall:\n")
-    percent_overall_string = format_percentage(overallFrameFail / frameCount)
-    print(f"Frames With At Least One Fail:\t{overallFrameFail}\t{percent_overall_string}\t% of the total # of frames\n")
-    print("**************************\n")
+	if frameCount == 0:
+		print(f"{UNDERLINE}TotalFrames:{RESET}\t0")
+		return
+
+	print(f"\n{UNDERLINE}TotalFrames{RESET}:\t{frameCount}\n")
+	print(f"{UNDERLINE}By Tag{RESET}:\n")
+
+	for tag, count in kbeyond.items():
+		percent = count / frameCount
+		percent_over_string = format_percentage(percent)
+		color = color_percentage(percent)
+		print(f"{BOLD}{tag}{RESET}:\t{count}\t{color}{percent_over_string}{RESET}\t% of the total # of frames\n")
+
+	print(f"{BOLD}Overall:{RESET}\n")
+	overall_percent = overallFrameFail / frameCount
+	percent_overall_string = format_percentage(overall_percent)
+	color = color_percentage(overall_percent)
+	print(f"Frames With At Least One Fail:\t{overallFrameFail}\t{color}{percent_overall_string}{RESET}\t% of the total # of frames\n")
+	print(f"{BOLD}**************************{RESET}\n")
 
 	
 def main():
@@ -615,16 +658,16 @@ def main():
 	
 	######## Iterate Through the XML for Bars detection ########
 	if args.bd:
-		print("")
-		print("Starting Bars Detection on " + baseName)
-		print("")
+		print(f"\nStarting Bars Detection on {baseName}\n")
 		durationStart, durationEnd = detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,bit_depth_10)
 		if args.be and durationStart != "" and durationEnd != "":
 			maxBarsDict = evalBars(startObj,pkt,durationStart,durationEnd,framesList,buffSize)
 			if maxBarsDict is None:
-				print("\nSomehting went wrong - cannot run colorbars evaluation")
+				print("\nSomething went wrong - cannot run colorbars evaluation")
 			else:
-				print("\nColor bars found, comparing color bars thresholds with the rest of the video")
+				print("\nNow comparing peak values of color bars to the rest of the video.")
+				print_peak_colorbars(maxBarsDict)
+				# Reset start and stop time to eval the whole video (color bars won't be flagged because we already have their max values)
 				durationStart = 0
 				durationEnd = 99999999
 				profile = maxBarsDict
@@ -651,13 +694,14 @@ def main():
 				pass
 	
 	######## Iterate Through the XML for General Analysis ########
-	print("")
-	print("Starting Analysis on " + baseName)
-	print("")
-	kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
+	if args.p:
+		print(f"\nStarting Analysis on {baseName} using assigned profile\n")
+		kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
+	elif args.t and args.o or args.u: 
+		print(f"\nStarting Analysis on {baseName} using user specified tag threshold\n")
+		kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
 	
-	print(f"\nFinished Processing File: " + baseName + ".qctools.xml.gz")
-	print("")
+	print(f"\nFinished Processing File: {baseName}.qctools.xml.gz\n")
 
 	# do some maths for the printout
 	if args.o or args.u or args.p is not None:
