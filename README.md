@@ -1,102 +1,114 @@
-scripts for automating QCTools actions
 
-qct-parse.py | find frames that are beyond thresholds for saturation, luma, etc
+# QCTools Automation Scripts
 
-makeqctoolsreport.py | make a qctools.xml.gz report for input video file
+This repository contains scripts for automating common QCTools actions, such as parsing frame data for threshold violations and generating reports.
 
-# qct-parse.py
+## Overview
 
-You can run a single tag against a supplied value from the CLI or run multiple tags against values set in the qct-parse_config.txt file.
+### Scripts:
 
-## arguments
-  -h, --help                | show this help message and exit
-
-  -i, --input            | the path to the input qctools.xml.gz file
+- **`qct-parse.py`**  
+  Finds frames that exceed thresholds for saturation, luma, and more.
   
-  -t, --tagname         | the tag name you want to test, e.g. SATMAX
-  
-  -o, --over             | the threshold overage number
-  
-  -u, --under             | the threshold under number
-  
-  -p, --profile         | compare frame data aginst tag values from config.txt file, us "-p default" for values from QCTools docs
-  
-  -buff, --buffSize         | Size of the circular buffer. if user enters an even number it'll default to the next largest number to make it odd, default size 11
-                        
-  -te, --thumbExport        | export thumbnails on/ off, default off
-  
-  -ted, --thumbExportDelay  | minimum frames between exported thumbs, default 9000
-                        
-  -tep, --thumbExportPath   | Path to thumb export. if ommitted, uses the input base-path
-                        
-  -ds, --durationStart      | the duration in seconds to start analysis (ffmpeg equivalent -ss)
-                        
-  -de, --durationEnd        | the duration in seconds to stop analysis (ffmpeg equivalent -t)
-                        
-  -bd, --barsDetection      | bar detection on/ off, default off
+- **`makeqctoolsreport.py`**  
+  Generates a QCTools `.xml.gz` report for a given input video file.
 
-  -be, --barsEvaluation     | if bars are found, use peak values from color bars as 'profile'
-  
-  -pr, --print               | print over/under frame data to console window, default off
-  
-  -q, --quiet               | print ffmpeg output to console window, default off
+---
 
+# `qct-parse.py`
 
-## examples
+Easily run a single tag against a supplied value or multiple tags using a configuration file (`qct-parse_config.txt`).
 
-### single tags
+## Arguments
 
+| Argument                   | Description                                                                                           |
+|-----------------------------|-------------------------------------------------------------------------------------------------------|
+| `-h`, `--help`              | Show this help message and exit                                                                       |
+| `-i`, `--input`             | Path to the input `qctools.xml.gz` file                                                               |
+| `-t`, `--tagname`           | The tag name you want to test (e.g., `SATMAX`)                                                        |
+| `-o`, `--over`              | Threshold overage number                                                                              |
+| `-u`, `--under`             | Threshold under number                                                                                |
+| `-p`, `--profile`           | Compare frame data against tag values from `config.txt`. Use `-p default` for QCTools default values  |
+| `-buff`, `--buffSize`       | Circular buffer size. If even, defaults to the next odd number (default: 11)                          |
+| `-te`, `--thumbExport`      | Enable/disable thumbnail export (default: off)                                                        |
+| `-ted`, `--thumbExportDelay`| Minimum frames between exported thumbnails (default: 9000)                                             |
+| `-tep`, `--thumbExportPath` | Path to thumbnail export. Uses input base-path if omitted                                             |
+| `-ds`, `--durationStart`    | Start analysis from this time (seconds, equivalent to ffmpeg `-ss`)                                   |
+| `-de`, `--durationEnd`      | End analysis after this time (seconds, equivalent to ffmpeg `-t`)                                     |
+| `-bd`, `--barsDetection`    | Enable/disable bar detection (default: off)                                                           |
+| `-be`, `--barsEvaluation`   | Use peak values from color bars as 'profile' if bars are detected                                      |
+| `-pr`, `--print`            | Print over/under frame data to console (default: off)                                                 |
+| `-q`, `--quiet`             | Suppress ffmpeg output in console (default: off)                                                      |
+
+## Examples
+
+### Run single tag tests
+```bash
 python qct-parse.py -t SATMAX -o 235 -t YMIN -u 16 -i /path/to/report.mkv.qctools.xml.gz
+```
 
-### run bars against default profile from QCTools docs
+### Run bars detection using default QCTools profile
+```bash
+python qct-parse.py -bd -p default -i /path/to/report.mkv.qctools.xml.gz
+```
 
-python qct-parse.py -bd -p default -i /path/to/reportsmkv.qctools.xml.gz
+### Export thumbnails of frames beyond threshold
+```bash
+python qct-parse.py -p default -te -tep /path/to/export/folder -i /path/to/report.mkv.qctools.xml.gz
+```
 
-### print out thumbnails of frames beyond threshold
+## Handy Applescript for Tag Extraction
 
-python qct-parse.py -p default -te -tep C:\path\to\export\folder -i C:\path\to\the\report.mkv.qctools.xml.gz
-
-## some handy applescript to grep individual tags
-
-### just percentages
-
+### Extract percentage values for `YMAX`
+```bash
 python ./qct-parse.py -i input.mxf.qctools.xml.gz -bd -p lowTolerance | grep 'YMAX' | awk 'NR==1 {print $3}'
+```
 
-### total number of frame failures
-
+### Get the total number of frame failures
+```bash
 python ./qct-parse.py -i input.mxf.qctools.xml.gz -bd -p lowTolerance | grep 'YMAX' | awk 'NR==1 {print $2}'
+```
 
-## dependencies
+---
 
-Python 2.7.x.
+# `makeqctoolsreport.py`
 
-Requires that [lxml](http://lxml.de/) is installed on your system. For more info on how it's used, see [here](http://www.ibm.com/developerworks/library/x-hiperfparse/)
+A Python port of Morgan’s [makeqctoolsreport.as](https://github.com/iamdamosuzuki/QCToolsReport), this script generates QCTools `.xml.gz` reports from input video files.
 
-### For Windows users:
-
-We **strongly** suggest using the pre-compiled installer found [here](https://pypi.python.org/pypi/lxml/3.3.3#downloads)
-
-### For Mac users:
-
-Try pip first, then try the macport. More info can be found [here](http://lxml.de/installation.html)
-
-# makeqctoolsreport.py
-
-python port of Morgan's [makeqctoolsreport.as](https://github.com/iamdamosuzuki/QCToolsReport)
-
-
-## example
-
+## Example Usage
+```bash
 python makeqctoolsreport.py /path/to/input.mxf
+```
 
-## contributors
+---
 
-@eddycolloton
+## Dependencies
 
-@CoatesBrendan
+Ensure Python 3.x.x is installed.
 
-@av_morgan
+Additionally, install the `lxml` library:
+```bash
+pip install lxml
+```
 
-## maintainer
+For more information on `lxml` usage, check out the [lxml documentation](http://lxml.de/).
 
-@av_morgan
+### Windows Users
+
+We **strongly recommend** using the pre-compiled installer available [here](https://pypi.python.org/pypi/lxml/3.3.3#downloads).
+
+### Mac Users
+
+Try installing `lxml` with `pip` first. If you encounter issues, consider using MacPorts. Further instructions can be found [here](http://lxml.de/installation.html).
+
+---
+
+## Contributors
+
+- [@eddycolloton](https://github.com/eddycolloton)
+- [@CoatesBrendan](https://github.com/CoatesBrendan)
+- [@av_morgan](https://github.com/av_morgan)
+
+## Maintainer
+
+- [@av_morgan](https://github.com/av_morgan)
