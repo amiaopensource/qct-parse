@@ -17,7 +17,7 @@ This repository contains scripts for automating common QCTools actions, such as 
 
 # `qct-parse.py`
 
-Easily run a single tag against a supplied value or multiple tags using a configuration file (`qct-parse_config.txt`).
+Run a single tag against a supplied value or multiple tags using a config file (`qct-parse_config.txt`).
 
 ## Arguments
 
@@ -57,18 +57,6 @@ python qct-parse.py -bd -p default -i /path/to/report.mkv.qctools.xml.gz
 python qct-parse.py -p default -te -tep /path/to/export/folder -i /path/to/report.mkv.qctools.xml.gz
 ```
 
-## Handy Applescript for Tag Extraction
-
-### Extract percentage values for `YMAX`
-```bash
-python ./qct-parse.py -i input.mxf.qctools.xml.gz -bd -p lowTolerance | grep 'YMAX' | awk 'NR==1 {print $3}'
-```
-
-### Get the total number of frame failures
-```bash
-python ./qct-parse.py -i input.mxf.qctools.xml.gz -bd -p lowTolerance | grep 'YMAX' | awk 'NR==1 {print $2}'
-```
-
 ---
 
 # `makeqctoolsreport.py`
@@ -85,6 +73,7 @@ python makeqctoolsreport.py /path/to/input.mxf
 ## Dependencies
 
 Ensure Python 3.x.x is installed.
+Requires FFmpeg.
 
 Additionally, install the `lxml` library:
 ```bash
@@ -92,14 +81,6 @@ pip install lxml
 ```
 
 For more information on `lxml` usage, check out the [lxml documentation](http://lxml.de/).
-
-### Windows Users
-
-We **strongly recommend** using the pre-compiled installer available [here](https://pypi.python.org/pypi/lxml/3.3.3#downloads).
-
-### Mac Users
-
-Try installing `lxml` with `pip` first. If you encounter issues, consider using MacPorts. Further instructions can be found [here](http://lxml.de/installation.html).
 
 ---
 
