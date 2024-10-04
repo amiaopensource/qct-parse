@@ -67,6 +67,10 @@ qctools.mkv
 
 If the qctools.xml.gz report is in an MKV attachment, the qctools.xml.gz report file will be extracted and saved as a separate file. 
 
+Both 10-bit and 8-bit values are supported. The bit depth will be detected automatically, and does not need to be specified. 
+
+If you wish to edit the profiles stored in the config.txt files, please note that there is a separate config.txt for 8-bit and 10-bit values.
+
 In order to export thumbnails, the QCTools report must be in the same directory as the video file it is describing, and must have the same file name as the report (excluding the `qctools.xml.gz`).
 
 ## Logging
