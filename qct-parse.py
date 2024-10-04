@@ -691,6 +691,7 @@ def main():
 	# set the path for the thumbnail export	
 	if args.tep and not args.te:
 		print("Buddy, you specified a thumbnail export path without specifying that you wanted to export the thumbnails. Please either add '-te' to your cli call or delete '-tep [path]'")
+		exit()
 	
 	if args.tep: # if user supplied thumbExportPath, use that
 		thumbPath = str(args.tep)
