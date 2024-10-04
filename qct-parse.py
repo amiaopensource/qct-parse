@@ -77,7 +77,6 @@ def initLog(inputPath):
     Initializes a log file for the given input file.
 
     The log file is created with the same name as the input file but with a '.log' extension.
-    Log entries include timestamps and messages, and the logging level is set to INFO.
 
     Args:
         inputPath (str): The file path for the input file, used to create the log file.
