@@ -435,6 +435,53 @@ def evalBars(startObj,pkt,durationStart,durationEnd,framesList,buffSize):
 		return maxBarsDict
 	
 
+def extract_report_mkv(startObj):
+	
+	report_file_output = startObj.replace(".qctools.mkv", ".qctools.xml.gz")
+	if os.path.isfile(report_file_output):
+		while True:
+			user_input = input(f"The file {os.path.basename(report_file_output)} already exists. \nExtract xml.gz from {os.path.basename(startObj)} and overwrite existing file? \n(y/n):\n")
+			if user_input.lower() in ["yes", "y"]:
+				os.remove(report_file_output)
+				# Run ffmpeg command to extract xml.gz report
+				full_command = [
+					'ffmpeg', 
+					'-hide_banner', 
+					'-loglevel', 'panic', 
+					'-dump_attachment:t:0', report_file_output, 
+					'-i', startObj
+				]
+				print(f'Extracting qctools.xml.gz report from {os.path.basename(startObj)}\n')
+				print(f'Running command: {" ".join(full_command)}\n')
+				subprocess.run(full_command)
+				break
+			elif user_input.lower() in ["no", "n"]:
+				print('Processing existing qctools report, not extracting file\n')
+				break
+			else:
+				print("Invalid input. Please enter yes/no.\n")
+	else:
+		# Run ffmpeg command to extract xml.gz report
+		full_command = [
+			'ffmpeg', 
+			'-hide_banner', 
+			'-loglevel', 'panic', 
+			'-dump_attachment:t:0', report_file_output, 
+			'-i', startObj
+		]
+		print(f'Extracting qctools.xml.gz report from {os.path.basename(startObj)}\n')
+		print(f'Running command: {" ".join(full_command)}\n')
+		subprocess.run(full_command)
+
+	if os.path.isfile(report_file_output):
+		startObj = report_file_output
+	else:
+		print(f'Unable to extract XML from QCTools mkv report file\n')
+		startObj = None
+	
+	return startObj
+
+
 def print_peak_colorbars(maxBarsDict):
 	# ASCI formatting
 	BOLD = "\033[1m"
@@ -592,6 +639,10 @@ def main():
 	
 	##### Initialize variables and buffers ######
 	startObj = args.i.replace("\\","/")
+	extension = os.path.splitext(startObj)[1]
+	# If qctools report is in an MKV attachment, extract .qctools.xml.gz report 
+	if extension.lower().endswith('mkv'):
+		startObj = extract_report_mkv(startObj)
 	buffSize = int(args.buff)   # cast the input buffer as an integer
 	if buffSize%2 == 0:
 		buffSize = buffSize + 1
