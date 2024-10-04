@@ -227,7 +227,7 @@ def printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString):
 
 		ffmpegString = (
             f'ffmpeg -ss {timeStampString} -i "{inputVid}" -vframes 1 '
-            f'-s {width}x{height} -y "{ffoutputFramePath}"'
+            f'-s {width}x{height} -y -update 1 "{ffoutputFramePath}"'
         )
 		output = subprocess.Popen(ffmpegString,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
 		out,err = output.communicate()
