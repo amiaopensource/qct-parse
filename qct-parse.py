@@ -16,6 +16,7 @@ import math				# used for rounding up buffer half
 import sys				# system stuff
 import re				# can't spell parse without re fam
 import time
+import json
 import shutil # dependency checking
 
 
@@ -142,8 +143,39 @@ def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay):
 			return False, thumbDelay # return false because it was NOT over and thumbDelay
 
 
+def get_video_resolution(input_video):
+    """
+    Use ffprobe to get the resolution of the input video file.
+
+    Args:
+        input_video (str): Path to the input video file.
+
+    Returns:
+        (width, height) (tuple): The width and height of the video.
+    """
+    ffprobe_command = [
+        'ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 
+        'stream=width,height', '-of', 'json', input_video
+    ]
+    
+    process = subprocess.Popen(ffprobe_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = process.communicate()
+    
+    if process.returncode != 0:
+        print(f"Error getting resolution with ffprobe: {err.decode('utf-8')}")
+        return None
+    
+    # Parse the JSON output
+    video_info = json.loads(out)
+    
+    # Extract the width and height from the video stream info
+    width = video_info['streams'][0]['width']
+    height = video_info['streams'][0]['height']
+    
+    return width, height
+
+
 # print thumbnail images of overs/unders	
-# Need to update - file naming convention has changed
 def printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString):
 	"""
     Generates a thumbnail image from the video based on a timestamp and attribute value.
@@ -174,21 +206,35 @@ def printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString):
 	#### init some variables using the args list
 	inputVid = startObj.replace(".qctools.xml.gz", "")
 	if os.path.isfile(inputVid):
+		# Get the resolution using ffprobe
+		resolution = get_video_resolution(inputVid)
+		if resolution:
+			width, height = resolution
+		else:
+			# Fall back to hardcoded resolution if ffprobe fails
+			width, height = 720, 486
+			
 		baseName = os.path.basename(startObj)
 		baseName = baseName.replace(".qctools.xml.gz", "")
 		outputFramePath = os.path.join(thumbPath,baseName + "." + tag + "." + str(tagValue) + "." + timeStampString + ".png")
 		ffoutputFramePath = outputFramePath.replace(":",".")
 		# for windows we gotta see if that first : for the drive has been replaced by a dot and put it back
+
 		match = ''
 		match = re.search(r"[A-Z]\.\/",ffoutputFramePath) # matches pattern R./ which should be R:/ on windows
 		if match:
 			ffoutputFramePath = ffoutputFramePath.replace(".",":",1) # replace first instance of "." in string ffoutputFramePath
-		ffmpegString = "ffmpeg -ss " + timeStampString + ' -i "' + inputVid +  '" -vframes 1 -s 720x486 -y "' + ffoutputFramePath + '"' # Hardcoded output frame size to 720x486 for now, need to infer from input eventually
+
+		ffmpegString = (
+            f'ffmpeg -ss {timeStampString} -i "{inputVid}" -vframes 1 '
+            f'-s {width}x{height} -y "{ffoutputFramePath}"'
+        )
 		output = subprocess.Popen(ffmpegString,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
 		out,err = output.communicate()
 		# Decode byte strings to handle newlines properly
 		out = out.decode('utf-8')
 		err = err.decode('utf-8')
+		
 		if args.q is False:
 			print(out)
 			print(err)
