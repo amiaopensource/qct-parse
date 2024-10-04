@@ -67,7 +67,7 @@ qctools.mkv
 
 If the qctools.xml.gz report is in an MKV attachment, the qctools.xml.gz report file will be extracted and saved as a separate file. 
 
-Both 10-bit and 8-bit values are supported. The bit depth will be detected automatically, and does not need to be specified. 
+Both 8-bit and 10-bit values are supported. The bit depth will be detected automatically, and does not need to be specified. 
 
 If you wish to edit the profiles stored in the config.txt files, please note that there is a separate config.txt for 8-bit and 10-bit values.
 
@@ -97,6 +97,7 @@ python makeqctoolsreport.py /path/to/input.mxf
 ## Dependencies
 
 Ensure Python 3.x.x is installed.
+
 Requires FFmpeg.
 
 Additionally, install the `lxml` library:
