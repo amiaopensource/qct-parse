@@ -24,7 +24,7 @@ Run a single tag against a supplied value or multiple tags using a config file (
 | Argument                   | Description                                                                                           |
 |-----------------------------|-------------------------------------------------------------------------------------------------------|
 | `-h`, `--help`              | Show this help message and exit                                                                       |
-| `-i`, `--input`             | Path to the input `qctools.xml.gz` file                                                               |
+| `-i`, `--input`             | Path to the input `qctools.xml.gz` or `qctools.mkv` file                                              |
 | `-t`, `--tagname`           | The tag name you want to test (e.g., `SATMAX`)                                                        |
 | `-o`, `--over`              | Threshold overage number                                                                              |
 | `-u`, `--under`             | Threshold under number                                                                                |
@@ -49,13 +49,33 @@ python qct-parse.py -t SATMAX -o 235 -t YMIN -u 16 -i /path/to/report.mkv.qctool
 
 ### Run bars detection using default QCTools profile
 ```bash
-python qct-parse.py -bd -p default -i /path/to/report.mkv.qctools.xml.gz
+python qct-parse.py -bd -p default -i /path/to/report.mkv.qctools.mkv
 ```
 
 ### Export thumbnails of frames beyond threshold
 ```bash
 python qct-parse.py -p default -te -tep /path/to/export/folder -i /path/to/report.mkv.qctools.xml.gz
 ```
+
+## Input files
+
+qct-parse.py will work with the following QCTools report formats: 
+```
+qctools.xml.gz 
+qctools.mkv
+```
+
+If the qctools.xml.gz report is in an MKV attachment, the qctools.xml.gz report file will be extracted and saved as a separate file. 
+
+In order to export thumbnails, the QCTools report must be in the same directory as the video file it is describing, and must have the same file name as the report (excluding the `qctools.xml.gz`).
+
+## Logging
+
+A log file is created with the same name as the input file but with a '.log' extension.
+For example: `some_video_file.mkv.qctools.xml.gz.log`
+
+Log files contain every instance of values over the specified threshold. For example:
+`2024-10-03 17:02:35,737 SATMAX is over 181.02 with a value of 698.0 at duration 00:00:16.4500`
 
 ---
 
