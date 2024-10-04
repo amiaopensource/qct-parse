@@ -363,6 +363,7 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 			elem.clear() # we're done with that element so let's get it outta memory
 	return kbeyond, frameCount, overallFrameFail
 
+
 def detectBitdepth(startObj,pkt,framesList,buffSize):
 	bit_depth_10 = False
 	with gzip.open(startObj) as xml:
@@ -478,6 +479,7 @@ def extract_report_mkv(startObj):
 	else:
 		print(f'Unable to extract XML from QCTools mkv report file\n')
 		startObj = None
+		exit()
 	
 	return startObj
 
