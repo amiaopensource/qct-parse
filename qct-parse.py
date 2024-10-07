@@ -672,7 +672,7 @@ def main():
 	parser.add_argument('-t','--tagname',dest='t', help="the tag name you want to test, e.g. SATMAX")
 	parser.add_argument('-o','--over',dest='o', help="the threshold overage number")
 	parser.add_argument('-u','--under',dest='u', help="the threshold under number")
-	parser.add_argument('-p','--profile',dest='p',default=None,help="use values from your qct-parse-config.txt file, provide profile/ template name, e.g. 'default'")
+	parser.add_argument('-p','--profile', dest='p', nargs='*', default=None, help="use values from your qct-parse-config.txt file, provide profile/ template name, e.g. 'default'")
 	parser.add_argument('-buff','--buffSize',dest='buff',default=11, help="Size of the circular buffer. if user enters an even number it'll default to the next largest number to make it odd (default size 11)")
 	parser.add_argument('-te','--thumbExport',dest='te',action='store_true',default=False, help="export thumbnail")
 	parser.add_argument('-ted','--thumbExportDelay',dest='ted',default=9000, help="minimum frames between exported thumbs")
@@ -684,6 +684,10 @@ def main():
 	parser.add_argument('-pr','--print',dest='pr',action='store_true',default=False, help="print over/under frame data to console window")
 	parser.add_argument('-q','--quiet',dest='q',action='store_true',default=False, help="hide ffmpeg output from console window")
 	args = parser.parse_args()
+	
+	## Validate required arguments
+	if not args.i:
+		parser.error("the following arguments are required: -i [path to QCTools report]")
 	
 	##### Initialize variables and buffers ######
 	startObj = args.i.replace("\\","/")
@@ -777,6 +781,8 @@ def main():
 			durationEnd = ""
 	
 	if args.p is not None:
+		# create list of profiles
+		list_of_templates = args.p
 		# setup configparser
 		config = configparser.RawConfigParser(allow_no_value=True)
 		dn, fn = os.path.split(os.path.abspath(__file__)) # grip the dir where ~this script~ is located, also where config.txt should be located
@@ -785,18 +791,17 @@ def main():
 			config.read(os.path.join(dn,"qct-parse_10bit_config.txt")) # read in the config file
 		else:
 			config.read(os.path.join(dn,"qct-parse_8bit_config.txt")) # read in the config file
-		template = args.p # get the profile/ section name from CLI
-		for t in tagList: 			# loop thru every tag available and 
-			try: 					# see if it's in the config section
-				profile[t.replace("_",".")] = config.get(template,t) # if it is, replace _ necessary for config file with . which xml attributes use, assign the value in config
-			except: # if no config tag exists, do nothing so we can move faster
-				pass
+		for template in list_of_templates:
+			for t in tagList: 			# loop thru every tag available and 
+				try: 					# see if it's in the config section
+					profile[t.replace("_",".")] = config.get(template,t) # if it is, replace _ necessary for config file with . which xml attributes use, assign the value in config
+				except: # if no config tag exists, do nothing so we can move faster
+					pass
+			######## Iterate Through the XML for General Analysis ########
+			print(f"\nStarting Analysis on {baseName} using assigned profile {template}\n")
+			kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
 	
-	######## Iterate Through the XML for General Analysis ########
-	if args.p:
-		print(f"\nStarting Analysis on {baseName} using assigned profile\n")
-		kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
-	elif args.t and args.o or args.u: 
+	if args.t and args.o or args.u: 
 		print(f"\nStarting Analysis on {baseName} using user specified tag threshold\n")
 		kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
 	
