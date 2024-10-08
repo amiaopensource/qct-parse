@@ -1,14 +1,14 @@
 
 # QCTools Automation Scripts
 
-This repository contains scripts for automating common QCTools actions, such as parsing frame data for threshold violations and generating reports.
+This repository contains scripts for automating analysis of QCTools reports.
 
 ## Overview
 
 ### Scripts:
 
 - **`qct-parse.py`**  
-  Finds frames that exceed thresholds for saturation, luma, and more.
+  Finds frames that exceed thresholds for QCTool tag(s). Detect color bars with the `-bd` option.
   
 - **`makeqctoolsreport.py`**  
   Generates a QCTools `.xml.gz` report for a given input video file.
@@ -17,7 +17,7 @@ This repository contains scripts for automating common QCTools actions, such as 
 
 # `qct-parse.py`
 
-Run a single tag against a supplied value or multiple tags using a config file (`qct-parse_config.txt`).
+Run a single tag against a supplied value or multiple tags using a config file (`qct-parse_[#]bit_config.txt`).
 
 ## Arguments
 
@@ -55,6 +55,11 @@ python qct-parse.py -bd -p default -i /path/to/report.mkv.qctools.mkv
 ### Export thumbnails of frames beyond threshold
 ```bash
 python qct-parse.py -p default -te -tep /path/to/export/folder -i /path/to/report.mkv.qctools.xml.gz
+```
+
+### Use peak values from detected color bars as thresholds
+```bash
+python qct-parse.py -bd -be -i /path/to/report.mkv.qctools.xml.gz
 ```
 
 ## Input files
