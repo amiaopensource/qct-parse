@@ -15,6 +15,7 @@ import gc				# not currently used
 import math				# used for rounding up buffer half
 import sys				# system stuff
 import re				# can't spell parse without re fam
+import operator
 import time
 import json
 import shutil # dependency checking
@@ -91,7 +92,7 @@ def initLog(inputPath):
 	
 
 # finds stuff over/under threshold
-def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay):
+def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay,adhoc_tag):
 	"""
     Evaluates whether a tag in a video frame exceeds or falls below a threshold value and logs the result.
 
@@ -120,27 +121,26 @@ def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay):
     """
 	tagValue = float(inFrame[tag])
 	frame_pkt_dts_time = inFrame[pkt]
-	if "MIN" in tag or "LOW" in tag: 
-		under = over
-		if tagValue < float(under): # if the attribute is under usr set threshold
-			timeStampString = dts2ts(frame_pkt_dts_time)
-			logging.warning(tag + " is under " + str(under) + " with a value of " + str(tagValue) + " at duration " + timeStampString)
-			if args.te and (thumbDelay > int(args.ted)): # if thumb export is turned on and there has been enough delay between this frame and the last exported thumb, then export a new thumb
-				printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString)
-				thumbDelay = 0
-			return True, thumbDelay # return true because it was over and thumbDelay
-		else:
-			return False, thumbDelay # return false because it was NOT over and thumbDelay
+	if adhoc_tag:
+		if args.o:
+			comparision = operator.gt
+		elif args.u:
+			comparision = operator.lt
 	else:
-		if tagValue > float(over): # if the attribute is over usr set threshold
-			timeStampString = dts2ts(frame_pkt_dts_time)
-			logging.warning(tag + " is over " + str(over) + " with a value of " + str(tagValue) + " at duration " + timeStampString)
-			if args.te and (thumbDelay > int(args.ted)): # if thumb export is turned on and there has been enough delay between this frame and the last exported thumb, then export a new thumb
-				printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString)
-				thumbDelay = 0
-			return True, thumbDelay # return true because it was over and thumbDelay
+		if "MIN" in tag or "LOW" in tag:
+			comparision = operator.lt
 		else:
-			return False, thumbDelay # return false because it was NOT over and thumbDelay
+			comparision = operator.gt
+	
+	if comparision(float(tagValue), float(over)): # if the attribute is over usr set threshold
+		timeStampString = dts2ts(frame_pkt_dts_time)
+		logging.warning(tag + " is over " + str(over) + " with a value of " + str(tagValue) + " at duration " + timeStampString)
+		if args.te and (thumbDelay > int(args.ted)): # if thumb export is turned on and there has been enough delay between this frame and the last exported thumb, then export a new thumb
+			printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString)
+			thumbDelay = 0
+		return True, thumbDelay # return true because it was over and thumbDelay
+	else:
+		return False, thumbDelay # return false because it was NOT over and thumbDelay
 
 
 def get_video_resolution(input_video):
@@ -318,7 +318,7 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,b
 	return durationStart, durationEnd
 
 
-def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,frameCount=0,overallFrameFail=0):
+def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag=False,frameCount=0,overallFrameFail=0):
 	"""
     Analyzes video frames from the QCTools report to detect threshold exceedances for specified tags or profiles and logs frame failures.
 
@@ -357,11 +357,8 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
     """
 	kbeyond = {} # init a dict for each key which we'll use to track how often a given key is over
 	fots = ""
-	if args.t:
-		kbeyond[args.t] = 0 
-	else:
-		for k,v in profile.items(): 
-			kbeyond[k] = 0
+	for k,v in profile.items(): 
+		kbeyond[k] = 0
 	with gzip.open(startObj) as xml:	
 		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): # iterparse the xml doc
 			if elem.attrib['media_type'] == "video": 	# get just the video frames
@@ -384,27 +381,16 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 					if args.pr is True:	# display "timestamp: Tag Value" (654.754100: YMAX 229) to the terminal window
 						print(framesList[-1][pkt] + ": " + args.t + " " + framesList[-1][args.t])
 					# Now we can parse the frame data from the buffer!	
-					if args.o or args.u and args.p is None: # if we're just doing a single tag
-						tag = args.t
-						if args.o:
-							over = float(args.o)
-						if args.u:
-							over = float(args.u)
+					for k,v in profile.items():
+						tag = k
+						over = float(v)
 						# ACTUALLY DO THE THING ONCE FOR EACH TAG
-						frameOver, thumbDelay = threshFinder(framesList[-1],args,startObj,pkt,tag,over,thumbPath,thumbDelay)
+						frameOver, thumbDelay = threshFinder(framesList[-1],args,startObj,pkt,tag,over,thumbPath,thumbDelay,adhoc_tag)
 						if frameOver is True:
-							kbeyond[tag] = kbeyond[tag] + 1 # note the over in the keyover dictionary
-					elif args.p or args.be is not None: # if we're using a profile or color bars evaluations
-						for k,v in profile.items():
-							tag = k
-							over = float(v)
-							# ACTUALLY DO THE THING ONCE FOR EACH TAG
-							frameOver, thumbDelay = threshFinder(framesList[-1],args,startObj,pkt,tag,over,thumbPath,thumbDelay)
-							if frameOver is True:
-								kbeyond[k] = kbeyond[k] + 1 # note the over in the key over dict
-								if not frame_pkt_dts_time in fots: # make sure that we only count each over frame once
-									overallFrameFail = overallFrameFail + 1
-									fots = frame_pkt_dts_time # set it again so we don't dupe
+							kbeyond[k] = kbeyond[k] + 1 # note the over in the key over dict
+							if not frame_pkt_dts_time in fots: # make sure that we only count each over frame once
+								overallFrameFail = overallFrameFail + 1
+								fots = frame_pkt_dts_time # set it again so we don't dupe
 					thumbDelay = thumbDelay + 1				
 			elem.clear() # we're done with that element so let's get it outta memory
 	return kbeyond, frameCount, overallFrameFail
@@ -688,9 +674,6 @@ def main():
 	## Validate required arguments
 	if not args.i:
 		parser.error("the following arguments are required: -i [path to QCTools report]")
-
-	if args.p and args.t:
-		parser.error("Running both profile and individual tag thresholds is not currently supported. They must be run individually.")
 	
 	##### Initialize variables and buffers ######
 	startObj = args.i.replace("\\","/")
@@ -777,7 +760,7 @@ def main():
 				durationStart = 0
 				durationEnd = 99999999
 				profile = maxBarsDict
-				kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
+				kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag=False)
 				printresults(kbeyond,frameCount,overallFrameFail)
 		else:
 			durationStart = ""
@@ -807,12 +790,19 @@ def main():
 
 			######## Iterate Through the XML for General Analysis ########
 			print(f"\nStarting Analysis on {baseName} using assigned profile {template}\n")
-			kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
+			kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag=False)
 			printresults(kbeyond,frameCount,overallFrameFail)
 	
 	if args.t and args.o or args.u: 
-		print(f"\nStarting Analysis on {baseName} using user specified tag threshold\n")
-		kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
+		profile = {}
+		tag = args.t
+		if args.o:
+			over = float(args.o)
+		if args.u:
+			over = float(args.u)
+		profile[tag] = over
+		print(f"\nStarting Analysis on {baseName} using user specified tag {tag} w/ threshold {over}\n")
+		kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag = True)
 		printresults(kbeyond,frameCount,overallFrameFail)
 	
 	print(f"\nFinished Processing File: {baseName}.qctools.xml.gz\n")
