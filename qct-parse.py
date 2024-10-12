@@ -120,7 +120,7 @@ def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay):
     """
 	tagValue = float(inFrame[tag])
 	frame_pkt_dts_time = inFrame[pkt]
-	if "MIN" in tag or "LOW" in tag:
+	if "MIN" in tag or "LOW" in tag: 
 		under = over
 		if tagValue < float(under): # if the attribute is under usr set threshold
 			timeStampString = dts2ts(frame_pkt_dts_time)
@@ -688,6 +688,9 @@ def main():
 	## Validate required arguments
 	if not args.i:
 		parser.error("the following arguments are required: -i [path to QCTools report]")
+
+	if args.p and args.t:
+		parser.error("Running both profile and individual tag thresholds is not currently supported. They must be run individually.")
 	
 	##### Initialize variables and buffers ######
 	startObj = args.i.replace("\\","/")
@@ -792,24 +795,28 @@ def main():
 		else:
 			config.read(os.path.join(dn,"qct-parse_8bit_config.txt")) # read in the config file
 		for template in list_of_templates:
+			# Check if the template is a valid section in the config
+			if not config.has_section(template):
+				print(f"Profile '{template}' does not match any section in the config.")
+				continue  # Skip to the next template if section doesn't exist
 			for t in tagList: 			# loop thru every tag available and 
 				try: 					# see if it's in the config section
 					profile[t.replace("_",".")] = config.get(template,t) # if it is, replace _ necessary for config file with . which xml attributes use, assign the value in config
 				except: # if no config tag exists, do nothing so we can move faster
 					pass
+
 			######## Iterate Through the XML for General Analysis ########
 			print(f"\nStarting Analysis on {baseName} using assigned profile {template}\n")
 			kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
+			printresults(kbeyond,frameCount,overallFrameFail)
 	
 	if args.t and args.o or args.u: 
 		print(f"\nStarting Analysis on {baseName} using user specified tag threshold\n")
 		kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList)
+		printresults(kbeyond,frameCount,overallFrameFail)
 	
 	print(f"\nFinished Processing File: {baseName}.qctools.xml.gz\n")
-
-	# do some maths for the printout
-	if args.o or args.u or args.p is not None:
-		printresults(kbeyond,frameCount,overallFrameFail)
+	
 	return
 
 dependencies()	
