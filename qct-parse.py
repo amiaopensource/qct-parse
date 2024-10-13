@@ -662,7 +662,7 @@ def main():
 	parser.add_argument('-buff','--buffSize',dest='buff',default=11, help="Size of the circular buffer. if user enters an even number it'll default to the next largest number to make it odd (default size 11)")
 	parser.add_argument('-te','--thumbExport',dest='te',action='store_true',default=False, help="export thumbnail")
 	parser.add_argument('-ted','--thumbExportDelay',dest='ted',default=9000, help="minimum frames between exported thumbs")
-	parser.add_argument('-tep','--thumbExportPath',dest='tep',default='', help="Path to thumb export. if ommitted, it uses the input basename")
+	parser.add_argument('-tep','--thumbExportPath',dest='tep',default='', help="Path to thumb export. if omitted, it uses the input basename")
 	parser.add_argument('-ds','--durationStart',dest='ds',default=0, help="the duration in seconds to start analysis")
 	parser.add_argument('-de','--durationEnd',dest='de',default=99999999, help="the duration in seconds to stop analysis")
 	parser.add_argument('-bd','--barsDetection',dest='bd',action ='store_true',default=False, help="turns Bar Detection on and off")
@@ -673,7 +673,7 @@ def main():
 	
 	## Validate required arguments
 	if not args.i:
-		parser.error("the following arguments are required: -i [path to QCTools report]")
+		parser.error("the following arguments are required: -i/--input [path to QCTools report]")
 	
 	##### Initialize variables and buffers ######
 	startObj = args.i.replace("\\","/")
