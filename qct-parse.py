@@ -674,6 +674,8 @@ def main():
 	## Validate required arguments
 	if not args.i:
 		parser.error("the following arguments are required: -i/--input [path to QCTools report]")
+	if args.o and args.u:
+		parser.error("Both the -o and -u options were used. Cannot set threshold for both over and under, only one at a time.")
 	
 	##### Initialize variables and buffers ######
 	startObj = args.i.replace("\\","/")
