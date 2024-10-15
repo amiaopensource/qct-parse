@@ -484,7 +484,7 @@ def extract_report_mkv(startObj):
 					'-dump_attachment:t:0', report_file_output, 
 					'-i', startObj
 				]
-				print(f'Extracting qctools.xml.gz report from {os.path.basename(startObj)}\n')
+				print(f'\nExtracting qctools.xml.gz report from {os.path.basename(startObj)}\n')
 				print(f'Running command: {" ".join(full_command)}\n')
 				subprocess.run(full_command)
 				break
@@ -655,9 +655,9 @@ def main():
 	#### init the stuff from the cli ########
 	parser = argparse.ArgumentParser(description="parses QCTools XML files for frames beyond broadcast values")
 	parser.add_argument('-i','--input',dest='i', help="the path to the input qctools.xml.gz file")
-	parser.add_argument('-t','--tagname',dest='t', help="the tag name you want to test, e.g. SATMAX")
-	parser.add_argument('-o','--over',dest='o', help="the threshold overage number")
-	parser.add_argument('-u','--under',dest='u', help="the threshold under number")
+	parser.add_argument('-t','--tagname',dest='t', nargs='*', help="the tag name you want to test, e.g. SATMAX")
+	parser.add_argument('-o','--over',dest='o', nargs='*', help="the threshold overage number")
+	parser.add_argument('-u','--under',dest='u', nargs='*', help="the threshold under number")
 	parser.add_argument('-p','--profile', dest='p', nargs='*', default=None, help="use values from your qct-parse-config.txt file, provide profile/ template name, e.g. 'default'")
 	parser.add_argument('-buff','--buffSize',dest='buff',default=11, help="Size of the circular buffer. if user enters an even number it'll default to the next largest number to make it odd (default size 11)")
 	parser.add_argument('-te','--thumbExport',dest='te',action='store_true',default=False, help="export thumbnail")
@@ -674,8 +674,15 @@ def main():
 	## Validate required arguments
 	if not args.i:
 		parser.error("the following arguments are required: -i/--input [path to QCTools report]")
-	if args.o and args.u:
-		parser.error("Both the -o and -u options were used. Cannot set threshold for both over and under, only one at a time.")
+
+	# Combine over and under values into a single list of (type, value) tuples
+	over_values = [('over', float(val)) for val in (args.o or [])]
+	under_values = [('under', float(val)) for val in (args.u or [])]
+	combined_values = over_values + under_values
+
+	# Ensure that the number of tags matches the combined number of over and under values
+	if len(args.t) != len(combined_values):
+		raise ValueError("Each tag must have either a corresponding over or under value.")
 	
 	##### Initialize variables and buffers ######
 	startObj = args.i.replace("\\","/")
@@ -796,16 +803,19 @@ def main():
 			printresults(kbeyond,frameCount,overallFrameFail)
 	
 	if args.t and args.o or args.u: 
-		profile = {}
-		tag = args.t
-		if args.o:
-			over = float(args.o)
-		if args.u:
-			over = float(args.u)
-		profile[tag] = over
-		print(f"\nStarting Analysis on {baseName} using user specified tag {tag} w/ threshold {over}\n")
-		kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag = True)
-		printresults(kbeyond,frameCount,overallFrameFail)
+		# Process each tag and its associated over or under value
+		for idx, tag in enumerate(args.t):
+			value_type, threshold = combined_values[idx]
+			profile = {}
+			# Do your processing here based on whether it's 'over' or 'under'
+			if value_type == 'over':
+				print(f"Processing tag: {tag}, over: {threshold}")
+			elif value_type == 'under':
+				print(f"Processing tag: {tag}, under: {threshold}")
+			profile[tag] = threshold
+			print(f"\nStarting Analysis on {baseName} using user specified tag {tag} w/ threshold {threshold}\n")
+			kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag = True)
+			printresults(kbeyond,frameCount,overallFrameFail)
 	
 	print(f"\nFinished Processing File: {baseName}.qctools.xml.gz\n")
 	
