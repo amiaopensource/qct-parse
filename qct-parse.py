@@ -656,8 +656,8 @@ def main():
 	parser = argparse.ArgumentParser(description="parses QCTools XML files for frames beyond broadcast values")
 	parser.add_argument('-i','--input',dest='i', help="the path to the input qctools.xml.gz file")
 	parser.add_argument('-t','--tagname',dest='t', nargs='*', help="the tag name you want to test, e.g. SATMAX")
-	parser.add_argument('-o','--over',dest='o', nargs='*', help="the threshold overage number")
-	parser.add_argument('-u','--under',dest='u', nargs='*', help="the threshold under number")
+	parser.add_argument('-o','--over',dest='o', action='append', help="the threshold overage number")
+	parser.add_argument('-u','--under',dest='u', action='append', help="the threshold under number")
 	parser.add_argument('-p','--profile', dest='p', nargs='*', default=None, help="use values from your qct-parse-config.txt file, provide profile/ template name, e.g. 'default'")
 	parser.add_argument('-buff','--buffSize',dest='buff',default=11, help="Size of the circular buffer. if user enters an even number it'll default to the next largest number to make it odd (default size 11)")
 	parser.add_argument('-te','--thumbExport',dest='te',action='store_true',default=False, help="export thumbnail")
@@ -682,7 +682,7 @@ def main():
 
 	# Ensure that the number of tags matches the combined number of over and under values
 	if len(args.t) != len(combined_values):
-		raise ValueError("Each tag must have either a corresponding over or under value.")
+		parser.error("Each tag must have either a corresponding over or under value.")
 	
 	##### Initialize variables and buffers ######
 	startObj = args.i.replace("\\","/")
