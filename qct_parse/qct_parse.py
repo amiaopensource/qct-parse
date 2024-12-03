@@ -811,5 +811,6 @@ def main():
 	
 	return
 
-dependencies()	
-main()
+if __name__ == '__main__':
+	dependencies()
+	main()

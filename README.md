@@ -5,17 +5,32 @@ This repository contains scripts for automating analysis of QCTools reports.
 
 ## Overview
 
+### Install from source:
+
+* Create a new Python Virtual Environment for qct_parse
+  * Unix based (Mac or Linux):
+    `python3 -m venv venv`  
+  * Windows:
+    `py -m venv venv`
+* Activate virtual env 
+  * Unix based:
+    `source ./venv/bin/activate`
+  * Windows:
+    `venv\scripts\activate`
+* Install Package
+  `python -m pip install .`
+
 ### Scripts:
 
-- **`qct-parse.py`**  
+- **`qct-parse`**  
   Finds frames that exceed thresholds for QCTool tag(s). Detect color bars with the `-bd` option.
   
-- **`makeqctoolsreport.py`**  
+- **`makeqctoolsreport`**  
   Generates a QCTools `.xml.gz` report for a given input video file.
 
 ---
 
-# `qct-parse.py`
+# `qct-parse`
 
 Run a single tag against a supplied value or multiple tags using a config file (`qct-parse_[#]bit_config.txt`).
 

@@ -1,0 +1,15 @@
+[project]
+name = "qct-parse"
+version = "0.2.1.dev0"
+dependencies =[
+    'lxml'
+]
+
+[tool.setuptools]
+packages=['qct_parse']
+
+[project.scripts]
+makeqctoolsreport = "qct_parse.makeqctoolsreport:main"
+overcatch = "qct_parse.overcatch:main"
+qct-parse = "qct_parse.qct_parse:main"
+
