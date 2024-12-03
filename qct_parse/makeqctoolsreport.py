@@ -163,6 +163,7 @@ def main():
 			transcode(startObj,outPath)
 			startObj = startObj + ".temp1.nut"
 	makeReport(startObj,outPath)
-		
+
 dependencies()
-main()
+if __name__ == '__main__':
+	main()
