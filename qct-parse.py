@@ -815,7 +815,7 @@ def main():
 				print(f"Processing tag: {tag}, under: {threshold}")
 			profile[tag] = threshold
 			print(f"\nStarting Analysis on {baseName} using user specified tag {tag} w/ threshold {threshold}\n")
-			kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,value_type,adhoc_tag = True)
+			kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,value_type,adhoc_tag=True)
 			printresults(kbeyond,frameCount,overallFrameFail)
 	
 	print(f"\nFinished Processing File: {baseName}.qctools.xml.gz\n")
