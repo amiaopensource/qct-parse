@@ -49,7 +49,7 @@ Run a single tag against a supplied value or multiple tags using a config file (
 |-----------------------------|-------------------------------------------------------------------------------------------------------|
 | `-h`, `--help`              | Show this help message and exit                                                                       |
 | `-i`, `--input`             | Path to the input `qctools.xml.gz` or `qctools.mkv` file                                              |
-| `-t`, `--tagname`           | The tag name you want to test (e.g., `SATMAX`)                                                        |
+| `-t`, `--tagname`           | The tag name you want to test (e.g., `SATMAX`); see table of tag names below for list              |
 | `-o`, `--over`              | Threshold overage number                                                                              |
 | `-u`, `--under`             | Threshold under number                                                                                |
 | `-p`, `--profile`           | Compare frame data against tag values from `config.txt`. Use `-p default` for QCTools default values  |
@@ -63,6 +63,20 @@ Run a single tag against a supplied value or multiple tags using a config file (
 | `-be`, `--barsEvaluation`   | Use peak values from color bars as 'profile' if bars are detected                                      |
 | `-pr`, `--print`            | Print over/under frame data to console (default: off)                                                 |
 | `-q`, `--quiet`             | Suppress ffmpeg output in console (default: off)                                                      |
+
+## Tags
+
+| Tag category                   | Tag names                                                                                           |
+|-----------------------------|-------------------------------------------------------------------------------------------------------|
+| [YUV values](https://bavc.github.io/qctools/filter_descriptions.html#yuv) | `YMIN,YLOW,YAVG,YHIGH,YMAX`<br>`UMIN,ULOW,UAVG,UHIGH,UMAX`<br>`VMIN,VLOW,VAVG,VHIGH,VMAX`   |
+| [YUV values (difference)](https://bavc.github.io/qctools/filter_descriptions.html#diff)   | `YDIF,UDIF,VDIF`  |
+| [Saturation values](https://bavc.github.io/qctools/filter_descriptions.html#saturation)   | `SATMIN,SATLOW,SATAVG,SATHIGH,SATMAX` |
+| [Hue values](https://bavc.github.io/qctools/filter_descriptions.html#hue) | `HUEMED,HUEAVG` |
+| [Temporal outliers](https://bavc.github.io/qctools/filter_descriptions.html#tout) | `TOUT`    |
+| [Vertical line repetitions](https://bavc.github.io/qctools/filter_descriptions.html#vrep) | `VREP`   |
+| [Broadcast range](https://bavc.github.io/qctools/filter_descriptions.html#brng) | `BRNG`    |
+| [Mean square error fields](https://bavc.github.io/qctools/filter_descriptions.html#msef) | `mse_y,mse_u,mse_v,mse_avg`  |
+| [Peak signal to noise ratio fields](https://bavc.github.io/qctools/filter_descriptions.html#psnrf) | `psnr_y,psnr_u,psnr_v,psnr_avg`   |
 
 ## Examples
 
