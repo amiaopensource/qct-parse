@@ -21,6 +21,9 @@ import json
 import shutil 			# dependency checking
 
 
+CONFIG_ENVIRONMENT_VARIABLE_NAME = 'QCT_PARSE_CONFIG_DIRECTORY'
+
+
 # check that we have required software installed
 def dependencies():
 	"""
@@ -775,6 +778,13 @@ def main():
 		config = configparser.RawConfigParser(allow_no_value=True)
 		dn, fn = os.path.split(os.path.abspath(__file__)) # grip the dir where ~this script~ is located, also where config.txt should be located
 		# assign config based on bit depth of tag values 
+		config_file_path = os.environ.get(CONFIG_ENVIRONMENT_VARIABLE_NAME)
+		if not config_file_path:
+			raise AttributeError(
+				f'{CONFIG_ENVIRONMENT_VARIABLE_NAME} is not set. '
+				f'This is needed to locate config files.'
+			)
+
 		if bit_depth_10:
 			config.read(os.path.join(dn,"qct-parse_10bit_config.txt")) # read in the config file
 		else:
