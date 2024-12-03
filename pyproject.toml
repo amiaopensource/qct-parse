@@ -17,3 +17,5 @@ makeqctoolsreport = "qct_parse.makeqctoolsreport:main"
 overcatch = "qct_parse.overcatch:main"
 qct-parse = "qct_parse.qct_parse:main"
 
+[tool.tox]
+envlist = ["3.9", "3.10", "3.11", "3.12", "3.13"]
