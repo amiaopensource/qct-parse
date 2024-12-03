@@ -7,6 +7,10 @@ dependencies =[
 
 [tool.setuptools]
 packages=['qct_parse']
+include-package-data = true
+
+[tool.setuptools.package-data]
+qct_parse = ["./qct-parse_8bit_config.txt", "./qct-parse_10bit_config.txt"]
 
 [project.scripts]
 makeqctoolsreport = "qct_parse.makeqctoolsreport:main"
