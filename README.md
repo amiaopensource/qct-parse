@@ -8,20 +8,24 @@ This repository contains scripts for automating analysis of QCTools reports.
 ### Install from source:
 
 * Create a new Python Virtual Environment for qct_parse
-  * Unix based (Mac or Linux):
-    `python3 -m venv venv`  
-  * Windows:
-    `py -m venv venv`
+  * Unix based (Mac or Linux):    
+    `python3 -m venv name_of_env` 
+  * Windows:    
+    `py -m venv name_of_env`
+    (where 'name_of_env' is replaced with the name of your virtual environment) 
 * Activate virtual env 
-  * Unix based:
-    `source ./venv/bin/activate`
-  * Windows:
-    `venv\scripts\activate`
+  * Unix based (Mac or Linux):     
+    `source ./name_of_env/bin/activate`
+  * Windows:     
+    `name_of_env\scripts\activate`
 * Install Package
+  * Navigate to the repo root directory `path/to/qct-parse/`
+  * Run the command:    
   `python -m pip install .`
 
 ### Test Code
 
+If you intend to develop the code for your proposes or contribute to the open source project, a test directory is provided in the repo.
 * Activate virtual env (see Install from source) 
 * Install pytest 
   `pip install pytest`
@@ -29,19 +33,16 @@ This repository contains scripts for automating analysis of QCTools reports.
   `python -m pytest`
 
 
-### Scripts:
+### Commands:
 
 - **`qct-parse`**  
   Finds frames that exceed thresholds for QCTool tag(s). Detect color bars with the `-bd` option.
-  
-- **`makeqctoolsreport`**  
-  Generates a QCTools `.xml.gz` report for a given input video file.
 
 ---
 
 # `qct-parse`
 
-Run a single tag against a supplied value or multiple tags using a config file (`qct-parse_[#]bit_config.txt`).
+Run a single tag against a supplied value or multiple tags using a config file.
 
 ## Arguments
 
@@ -82,22 +83,22 @@ Run a single tag against a supplied value or multiple tags using a config file (
 
 ### Run single tag tests
 ```bash
-python qct-parse.py -t SATMAX -o 235 -t YMIN -u 16 -i /path/to/report.mkv.qctools.xml.gz
+qct-parse -t SATMAX -o 235 -t YMIN -u 16 -i /path/to/report.mkv.qctools.xml.gz
 ```
 
 ### Run bars detection using default QCTools profile
 ```bash
-python qct-parse.py -bd -p default -i /path/to/report.mkv.qctools.mkv
+qct-parse -bd -p default -i /path/to/report.mkv.qctools.mkv
 ```
 
 ### Export thumbnails of frames beyond threshold
 ```bash
-python qct-parse.py -p default -te -tep /path/to/export/folder -i /path/to/report.mkv.qctools.xml.gz
+qct-parse -p default -te -tep /path/to/export/folder -i /path/to/report.mkv.qctools.xml.gz
 ```
 
 ### Use peak values from detected color bars as thresholds
 ```bash
-python qct-parse.py -bd -be -i /path/to/report.mkv.qctools.xml.gz
+qct-parse -bd -be -i /path/to/report.mkv.qctools.xml.gz
 ```
 
 ## Input files
@@ -111,6 +112,8 @@ qctools.mkv
 If the qctools.xml.gz report is in an MKV attachment, the qctools.xml.gz report file will be extracted and saved as a separate file. 
 
 Both 8-bit and 10-bit values are supported. The bit depth will be detected automatically, and does not need to be specified. 
+
+## Config Files
 
 If you wish to edit the profiles stored in the config.txt files, please note that there is a separate config.txt for 8-bit and 10-bit values.
 
@@ -126,13 +129,26 @@ Log files contain every instance of values over the specified threshold. For exa
 
 ---
 
-# `makeqctoolsreport.py`
+### Legacy Commands:
+
+Not in active development. Please file an issue if you are interested in using these.
+
+- **`makeqctoolsreport`**
 
 A Python port of Morgan’s [makeqctoolsreport.as](https://github.com/iamdamosuzuki/QCToolsReport), this script generates QCTools `.xml.gz` reports from input video files.
 
 ## Example Usage
 ```bash
-python makeqctoolsreport.py /path/to/input.mxf
+makeqctoolsreport /path/to/input.mxf
+```
+
+- **`overcatch`**
+
+A script from the original qct-parse development for running a report against multiple profiles.
+
+## Example Usage
+```bash
+overcatch /path/to/input.mxf
 ```
 
 ---
@@ -143,10 +159,7 @@ Ensure Python 3.x.x is installed.
 
 Requires FFmpeg.
 
-Additionally, install the `lxml` library:
-```bash
-pip install lxml
-```
+This tool uses the `lxml` python module which is automatically installed with the qct-parse package. 
 
 For more information on `lxml` usage, check out the [lxml documentation](http://lxml.de/).
 
@@ -161,3 +174,4 @@ For more information on `lxml` usage, check out the [lxml documentation](http://
 ## Maintainer
 
 - [@av_morgan](https://github.com/av_morgan)
+- [@eddycolloton](https://github.com/eddycolloton)
