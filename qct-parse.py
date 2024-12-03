@@ -18,7 +18,7 @@ import re				# can't spell parse without re fam
 import operator
 import time
 import json
-import shutil # dependency checking
+import shutil 			# dependency checking
 
 
 # check that we have required software installed
