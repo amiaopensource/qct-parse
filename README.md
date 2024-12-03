@@ -20,6 +20,15 @@ This repository contains scripts for automating analysis of QCTools reports.
 * Install Package
   `python -m pip install .`
 
+### Test Code
+
+* Activate virtual env (see Install from source) 
+* Install pytest 
+  `pip install pytest`
+* Run tests
+  `python -m pytest`
+
+
 ### Scripts:
 
 - **`qct-parse`**  

@@ -19,3 +19,8 @@ qct-parse = "qct_parse.qct_parse:main"
 
 [tool.tox]
 envlist = ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+[tool.tox.env_run_base]
+description = "Run test under {base_python}"
+commands = [["pytest"]]
+deps = ["pytest"]
