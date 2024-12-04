@@ -32,6 +32,13 @@ If you intend to develop the code for your proposes or contribute to the open so
 * Run tests
   `python -m pytest`
 
+### Building the documentation
+* Activate virtual env (see Install from source)
+* Install sphinx and myst-parser
+  `pip install sphinx myst-parser`
+* Run sphinx-build command
+  `sphinx-build ./docs ./dist/docs`
+
 
 ### Commands:
 
