@@ -92,7 +92,21 @@ def initLog(inputPath):
 	logPath = inputPath + '.log'
 	logging.basicConfig(filename=logPath,level=logging.INFO,format='%(asctime)s %(message)s')
 	logging.info("Started QCT-Parse")
-	
+
+def set_logger(input_path):
+	log_path = f'{input_path}.log'
+	logger = logging.getLogger()
+	if logger.hasHandlers():
+		logger.handlers.clear()
+	logger.setLevel(logging.INFO)
+
+	file_handler = logging.FileHandler(filename=log_path)
+	file_handler.setLevel(logging.INFO)
+	file_handler.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+	logger.addHandler(file_handler)
+	logger.info("Started QCT-Parse")
+
+
 
 # finds stuff over/under threshold
 def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay,adhoc_tag):
@@ -613,7 +627,167 @@ def printresults(kbeyond, frameCount, overallFrameFail):
 	print(f"Frames With At Least One Fail:\t{overallFrameFail}\t{color}{percent_overall_string}{RESET}\t% of the total # of frames\n")
 	print(f"{BOLD}**************************{RESET}\n")
 
-	
+def get_arg_parser():
+	parser = argparse.ArgumentParser(description="parses QCTools XML files for frames beyond broadcast values")
+	parser.add_argument('-i','--input',dest='i', action='append', help="the path to the input qctools.xml.gz file")
+	parser.add_argument('-t','--tagname',dest='t', help="the tag name you want to test, e.g. SATMAX")
+	parser.add_argument('-o','--over',dest='o', help="the threshold overage number")
+	parser.add_argument('-u','--under',dest='u', help="the threshold under number")
+	parser.add_argument('-p','--profile', dest='p', nargs='*', default=None, help="use values from your qct-parse-config.txt file, provide profile/ template name, e.g. 'default'")
+	parser.add_argument('-buff','--buffSize',dest='buff',default=11, help="Size of the circular buffer. if user enters an even number it'll default to the next largest number to make it odd (default size 11)")
+	parser.add_argument('-te','--thumbExport',dest='te',action='store_true',default=False, help="export thumbnail")
+	parser.add_argument('-ted','--thumbExportDelay',dest='ted',default=9000, help="minimum frames between exported thumbs")
+	parser.add_argument('-tep','--thumbExportPath',dest='tep',default='', help="Path to thumb export. if omitted, it uses the input basename")
+	parser.add_argument('-ds','--durationStart',dest='ds',default=0, help="the duration in seconds to start analysis")
+	parser.add_argument('-de','--durationEnd',dest='de',default=99999999, help="the duration in seconds to stop analysis")
+	parser.add_argument('-bd','--barsDetection',dest='bd',action ='store_true',default=False, help="turns Bar Detection on and off")
+	parser.add_argument('-be','--barsEvaluation',dest='be',action ='store_true',default=False, help="turns Color Bar Evaluation on and off")
+	parser.add_argument('-pr','--print',dest='pr',action='store_true',default=False, help="print over/under frame data to console window")
+	parser.add_argument('-q','--quiet',dest='q',action='store_true',default=False, help="hide ffmpeg output from console window")
+	return parser
+
+
+def parse_single_qc_tools_report(input_file, args):
+	startObj = input_file.replace("\\","/")
+	extension = os.path.splitext(startObj)[1]
+	# If qctools report is in an MKV attachment, extract .qctools.xml.gz report
+	if extension.lower().endswith('mkv'):
+		startObj = extract_report_mkv(startObj)
+	buffSize = int(args.buff)   # cast the input buffer as an integer
+	if buffSize%2 == 0:
+		buffSize = buffSize + 1
+	set_logger(startObj)
+	overcount = 0	# init count of overs
+	undercount = 0	# init count of unders
+	count = 0		# init total frames counter
+	framesList = collections.deque(maxlen=buffSize) # init framesList
+	thumbDelay = int(args.ted)	# get a seconds number for the delay in the original file btw exporting tags
+	parentDir = os.path.dirname(startObj)
+	baseName = os.path.basename(startObj)
+	baseName = baseName.replace(".qctools.xml.gz", "")
+	durationStart = args.ds
+	durationEnd = args.de
+
+	# we gotta find out if the qctools report has pkt_dts_time or pkt_pts_time ugh
+	with gzip.open(startObj) as xml:
+		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'):  # iterparse the xml doc
+			if elem.attrib['media_type'] == "video":  # get just the video frames
+				# we gotta find out if the qctools report has pkt_dts_time or pkt_pts_time ugh
+				match = re.search(r"pkt_.ts_time", etree.tostring(elem).decode('utf-8'))
+				if match:
+					pkt = match.group()
+					break
+
+	###### Initialize values from the Config Parser
+	# Determine if video values are 10 bit depth
+	bit_depth_10 = detectBitdepth(startObj,pkt,framesList,buffSize)
+	# init a dictionary where we'll store reference values from our config file
+	profile = {}
+	# init a list of every tag available in a QCTools Report
+	tagList = ["YMIN","YLOW","YAVG","YHIGH","YMAX","UMIN","ULOW","UAVG","UHIGH","UMAX","VMIN","VLOW","VAVG","VHIGH","VMAX","SATMIN","SATLOW","SATAVG","SATHIGH","SATMAX","HUEMED","HUEAVG","YDIF","UDIF","VDIF","TOUT","VREP","BRNG","mse_y","mse_u","mse_v","mse_avg","psnr_y","psnr_u","psnr_v","psnr_avg"]
+
+	# set the start and end duration times
+	if args.bd:
+		durationStart = ""				# if bar detection is turned on then we have to calculate this
+		durationEnd = ""				# if bar detection is turned on then we have to calculate this
+	elif args.ds:
+		durationStart = float(args.ds) 	# The duration at which we start analyzing the file if no bar detection is selected
+	elif not args.de == 99999999:
+		durationEnd = float(args.de) 	# The duration at which we stop analyzing the file if no bar detection is selected
+
+
+	# set the path for the thumbnail export
+	if args.tep and not args.te:
+		print("Buddy, you specified a thumbnail export path without specifying that you wanted to export the thumbnails. Please either add '-te' to your cli call or delete '-tep [path]'")
+		exit()
+
+	if args.tep: # if user supplied thumbExportPath, use that
+		thumbPath = str(args.tep)
+	else:
+		if args.t: # if they supplied a single tag
+			if args.o: # if the supplied tag is looking for a threshold Over
+				thumbPath = os.path.join(parentDir, str(args.t) + "." + str(args.o))
+			elif args.u: # if the supplied tag was looking for a threshold Under
+				thumbPath = os.path.join(parentDir, str(args.t) + "." + str(args.u))
+		else: # if they're using a profile, put all thumbs in 1 dir
+			thumbPath = os.path.join(parentDir, "ThumbExports")
+
+	if args.te: # make the thumb export path if it doesn't already exist
+		if not os.path.exists(thumbPath):
+			os.makedirs(thumbPath)
+
+
+	######## Iterate Through the XML for Bars detection ########
+	if args.bd:
+		print(f"\nStarting Bars Detection on {baseName}\n")
+		durationStart, durationEnd = detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,bit_depth_10)
+		if args.be and durationStart != "" and durationEnd != "":
+			maxBarsDict = evalBars(startObj,pkt,durationStart,durationEnd,framesList,buffSize)
+			if maxBarsDict is None:
+				print("\nSomething went wrong - cannot run colorbars evaluation")
+			else:
+				print("\nNow comparing peak values of color bars to the rest of the video.")
+				print_peak_colorbars(maxBarsDict)
+				# Reset start and stop time to eval the whole video (color bars won't be flagged because we already have their max values)
+				durationStart = 0
+				durationEnd = 99999999
+				profile = maxBarsDict
+				kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag=False)
+				printresults(kbeyond,frameCount,overallFrameFail)
+		else:
+			durationStart = ""
+			durationEnd = ""
+
+	if args.p is not None:
+		# create list of profiles
+		list_of_templates = args.p
+		# setup configparser
+		config = configparser.RawConfigParser(allow_no_value=True)
+		dn, fn = os.path.split(os.path.abspath(__file__)) # grip the dir where ~this script~ is located, also where config.txt should be located
+		# assign config based on bit depth of tag values
+		if CONFIG_ENVIRONMENT_VARIABLE_NAME in os.environ:
+			print(f"Using config files in ${CONFIG_ENVIRONMENT_VARIABLE_NAME}")
+			dn = os.environ[CONFIG_ENVIRONMENT_VARIABLE_NAME]
+
+		if bit_depth_10:
+			config.read(os.path.join(dn,"qct-parse_10bit_config.txt")) # read in the config file
+		else:
+			config.read(os.path.join(dn,"qct-parse_8bit_config.txt")) # read in the config file
+		for template in list_of_templates:
+			# Check if the template is a valid section in the config
+			if not config.has_section(template):
+				print(f"Profile '{template}' does not match any section in the config.")
+				continue  # Skip to the next template if section doesn't exist
+			for t in tagList: 			# loop thru every tag available and
+				try: 					# see if it's in the config section
+					profile[t.replace("_",".")] = config.get(template,t) # if it is, replace _ necessary for config file with . which xml attributes use, assign the value in config
+				except: # if no config tag exists, do nothing so we can move faster
+					pass
+
+			######## Iterate Through the XML for General Analysis ########
+			print(f"\nStarting Analysis on {baseName} using assigned profile {template}\n")
+			kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag=False)
+			printresults(kbeyond,frameCount,overallFrameFail)
+
+	if args.t and args.o or args.u:
+		profile = {}
+		tag = args.t
+		if args.o:
+			over = float(args.o)
+		if args.u:
+			over = float(args.u)
+		profile[tag] = over
+		print(f"\nStarting Analysis on {baseName} using user specified tag {tag} w/ threshold {over}\n")
+		kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag = True)
+		printresults(kbeyond,frameCount,overallFrameFail)
+
+	print(f"\nFinished Processing File: {baseName}.qctools.xml.gz\n")
+
+def parse_qc_tools_report(args):
+	##### Initialize variables and buffers ######
+	for input_file in args.i:
+		parse_single_qc_tools_report(input_file, args)
+
 def main():
 	"""
     Main function that parses QCTools XML files, applies analysis, and optionally exports thumbnails.
@@ -656,167 +830,15 @@ def main():
         None: The function processes the XML file, performs analysis, and optionally exports thumbnails and prints results to the console.
     """
 	#### init the stuff from the cli ########
-	parser = argparse.ArgumentParser(description="parses QCTools XML files for frames beyond broadcast values")
-	parser.add_argument('-i','--input',dest='i', help="the path to the input qctools.xml.gz file")
-	parser.add_argument('-t','--tagname',dest='t', help="the tag name you want to test, e.g. SATMAX")
-	parser.add_argument('-o','--over',dest='o', help="the threshold overage number")
-	parser.add_argument('-u','--under',dest='u', help="the threshold under number")
-	parser.add_argument('-p','--profile', dest='p', nargs='*', default=None, help="use values from your qct-parse-config.txt file, provide profile/ template name, e.g. 'default'")
-	parser.add_argument('-buff','--buffSize',dest='buff',default=11, help="Size of the circular buffer. if user enters an even number it'll default to the next largest number to make it odd (default size 11)")
-	parser.add_argument('-te','--thumbExport',dest='te',action='store_true',default=False, help="export thumbnail")
-	parser.add_argument('-ted','--thumbExportDelay',dest='ted',default=9000, help="minimum frames between exported thumbs")
-	parser.add_argument('-tep','--thumbExportPath',dest='tep',default='', help="Path to thumb export. if omitted, it uses the input basename")
-	parser.add_argument('-ds','--durationStart',dest='ds',default=0, help="the duration in seconds to start analysis")
-	parser.add_argument('-de','--durationEnd',dest='de',default=99999999, help="the duration in seconds to stop analysis")
-	parser.add_argument('-bd','--barsDetection',dest='bd',action ='store_true',default=False, help="turns Bar Detection on and off")
-	parser.add_argument('-be','--barsEvaluation',dest='be',action ='store_true',default=False, help="turns Color Bar Evaluation on and off")
-	parser.add_argument('-pr','--print',dest='pr',action='store_true',default=False, help="print over/under frame data to console window")
-	parser.add_argument('-q','--quiet',dest='q',action='store_true',default=False, help="hide ffmpeg output from console window")
+	parser = get_arg_parser()
 	args = parser.parse_args()
-	
 	## Validate required arguments
 	if not args.i:
 		parser.error("the following arguments are required: -i/--input [path to QCTools report]")
 	if args.o and args.u:
 		parser.error("Both the -o and -u options were used. Cannot set threshold for both over and under, only one at a time.")
-	
-	##### Initialize variables and buffers ######
-	startObj = args.i.replace("\\","/")
-	extension = os.path.splitext(startObj)[1]
-	# If qctools report is in an MKV attachment, extract .qctools.xml.gz report 
-	if extension.lower().endswith('mkv'):
-		startObj = extract_report_mkv(startObj)
-	buffSize = int(args.buff)   # cast the input buffer as an integer
-	if buffSize%2 == 0:
-		buffSize = buffSize + 1
-	initLog(startObj)	# initialize the log
-	overcount = 0	# init count of overs
-	undercount = 0	# init count of unders
-	count = 0		# init total frames counter
-	framesList = collections.deque(maxlen=buffSize) # init framesList 
-	thumbDelay = int(args.ted)	# get a seconds number for the delay in the original file btw exporting tags
-	parentDir = os.path.dirname(startObj)
-	baseName = os.path.basename(startObj)
-	baseName = baseName.replace(".qctools.xml.gz", "")
-	durationStart = args.ds
-	durationEnd = args.de
+	parse_qc_tools_report(args)
 
-	# we gotta find out if the qctools report has pkt_dts_time or pkt_pts_time ugh
-	with gzip.open(startObj) as xml:    
-		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'):  # iterparse the xml doc
-			if elem.attrib['media_type'] == "video":  # get just the video frames
-				# we gotta find out if the qctools report has pkt_dts_time or pkt_pts_time ugh
-				match = re.search(r"pkt_.ts_time", etree.tostring(elem).decode('utf-8'))
-				if match:
-					pkt = match.group()
-					break
-
-	###### Initialize values from the Config Parser
-	# Determine if video values are 10 bit depth 
-	bit_depth_10 = detectBitdepth(startObj,pkt,framesList,buffSize)
-	# init a dictionary where we'll store reference values from our config file
-	profile = {} 
-	# init a list of every tag available in a QCTools Report
-	tagList = ["YMIN","YLOW","YAVG","YHIGH","YMAX","UMIN","ULOW","UAVG","UHIGH","UMAX","VMIN","VLOW","VAVG","VHIGH","VMAX","SATMIN","SATLOW","SATAVG","SATHIGH","SATMAX","HUEMED","HUEAVG","YDIF","UDIF","VDIF","TOUT","VREP","BRNG","mse_y","mse_u","mse_v","mse_avg","psnr_y","psnr_u","psnr_v","psnr_avg"]
-
-	# set the start and end duration times
-	if args.bd:
-		durationStart = ""				# if bar detection is turned on then we have to calculate this
-		durationEnd = ""				# if bar detection is turned on then we have to calculate this
-	elif args.ds:
-		durationStart = float(args.ds) 	# The duration at which we start analyzing the file if no bar detection is selected
-	elif not args.de == 99999999:
-		durationEnd = float(args.de) 	# The duration at which we stop analyzing the file if no bar detection is selected
-	
-	
-	# set the path for the thumbnail export	
-	if args.tep and not args.te:
-		print("Buddy, you specified a thumbnail export path without specifying that you wanted to export the thumbnails. Please either add '-te' to your cli call or delete '-tep [path]'")
-		exit()
-	
-	if args.tep: # if user supplied thumbExportPath, use that
-		thumbPath = str(args.tep)
-	else:
-		if args.t: # if they supplied a single tag
-			if args.o: # if the supplied tag is looking for a threshold Over
-				thumbPath = os.path.join(parentDir, str(args.t) + "." + str(args.o))
-			elif args.u: # if the supplied tag was looking for a threshold Under
-				thumbPath = os.path.join(parentDir, str(args.t) + "." + str(args.u))
-		else: # if they're using a profile, put all thumbs in 1 dir
-			thumbPath = os.path.join(parentDir, "ThumbExports")
-	
-	if args.te: # make the thumb export path if it doesn't already exist
-		if not os.path.exists(thumbPath):
-			os.makedirs(thumbPath)
-	
-	
-	######## Iterate Through the XML for Bars detection ########
-	if args.bd:
-		print(f"\nStarting Bars Detection on {baseName}\n")
-		durationStart, durationEnd = detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,bit_depth_10)
-		if args.be and durationStart != "" and durationEnd != "":
-			maxBarsDict = evalBars(startObj,pkt,durationStart,durationEnd,framesList,buffSize)
-			if maxBarsDict is None:
-				print("\nSomething went wrong - cannot run colorbars evaluation")
-			else:
-				print("\nNow comparing peak values of color bars to the rest of the video.")
-				print_peak_colorbars(maxBarsDict)
-				# Reset start and stop time to eval the whole video (color bars won't be flagged because we already have their max values)
-				durationStart = 0
-				durationEnd = 99999999
-				profile = maxBarsDict
-				kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag=False)
-				printresults(kbeyond,frameCount,overallFrameFail)
-		else:
-			durationStart = ""
-			durationEnd = ""
-	
-	if args.p is not None:
-		# create list of profiles
-		list_of_templates = args.p
-		# setup configparser
-		config = configparser.RawConfigParser(allow_no_value=True)
-		dn, fn = os.path.split(os.path.abspath(__file__)) # grip the dir where ~this script~ is located, also where config.txt should be located
-		# assign config based on bit depth of tag values
-		if CONFIG_ENVIRONMENT_VARIABLE_NAME in os.environ:
-			print(f"Using config files in ${CONFIG_ENVIRONMENT_VARIABLE_NAME}")
-			dn = os.environ[CONFIG_ENVIRONMENT_VARIABLE_NAME]
-
-		if bit_depth_10:
-			config.read(os.path.join(dn,"qct-parse_10bit_config.txt")) # read in the config file
-		else:
-			config.read(os.path.join(dn,"qct-parse_8bit_config.txt")) # read in the config file
-		for template in list_of_templates:
-			# Check if the template is a valid section in the config
-			if not config.has_section(template):
-				print(f"Profile '{template}' does not match any section in the config.")
-				continue  # Skip to the next template if section doesn't exist
-			for t in tagList: 			# loop thru every tag available and 
-				try: 					# see if it's in the config section
-					profile[t.replace("_",".")] = config.get(template,t) # if it is, replace _ necessary for config file with . which xml attributes use, assign the value in config
-				except: # if no config tag exists, do nothing so we can move faster
-					pass
-
-			######## Iterate Through the XML for General Analysis ########
-			print(f"\nStarting Analysis on {baseName} using assigned profile {template}\n")
-			kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag=False)
-			printresults(kbeyond,frameCount,overallFrameFail)
-	
-	if args.t and args.o or args.u: 
-		profile = {}
-		tag = args.t
-		if args.o:
-			over = float(args.o)
-		if args.u:
-			over = float(args.u)
-		profile[tag] = over
-		print(f"\nStarting Analysis on {baseName} using user specified tag {tag} w/ threshold {over}\n")
-		kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag = True)
-		printresults(kbeyond,frameCount,overallFrameFail)
-	
-	print(f"\nFinished Processing File: {baseName}.qctools.xml.gz\n")
-	
-	return
 
 if __name__ == '__main__':
 	dependencies()
