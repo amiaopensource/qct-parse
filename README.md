@@ -70,6 +70,7 @@ Run a single tag against a supplied value or multiple tags using a profile.
 | `-bd`, `--barsDetection`    | Enable/disable bar detection (default: off)                                                           |
 | `-be`, `--barsEvaluation`   | Use peak values from color bars as 'profile' if bars are detected                                      |
 | `-pr`, `--print`            | Print over/under frame data to console (default: off)                                                 |
+| `-csv`, `--csvreport`            | Print summary results to a csv sidecar file                                                      |
 | `-q`, `--quiet`             | Suppress ffmpeg output in console (default: off)                                                      |
 
 ## Tags
