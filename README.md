@@ -35,14 +35,14 @@ If you intend to develop the code for your proposes or contribute to the open so
 
 ### Commands:
 
-- **`qct-parse`**  
-  Finds frames that exceed thresholds for QCTool tag(s). Detect color bars with the `-bd` option.
+- **`qct-parse -i/--input [path to QCTools report] [optional arguments]`**  
+  Finds frames that exceed thresholds for QCTool tag(s). Full list of command line arguments below.
 
 ---
 
 # `qct-parse`
 
-Run a single tag against a supplied value or multiple tags using a config file.
+Run a single tag against a supplied value or multiple tags using a profile.
 
 ## Arguments
 
@@ -115,16 +115,43 @@ Both 8-bit and 10-bit values are supported. The bit depth will be detected autom
 
 ## Config Files
 
-If you wish to edit the profiles stored in the config.txt files, please note that there is a separate config.txt for 8-bit and 10-bit values.
+The provided profiles are:   
+* default
+* highTolerance
+* midTolerance
+* lowTolerance
+
+Each of these profiles contain the following tags with a corresponding threshold:    
+`YLOW, YMAX, UMIN, UMAX, VMIN, VMAX, SATMAX, TOUT, VREP`
+
+The profiles are stored in the config.txt files. Please note that there is a separate config.txt for 8-bit and 10-bit values.
+
+The process for providing user supplied profiles is in development.     
+Currently, if you wish to create your own profile, you will need to create your own config directory and `config.txt` file.    
+There is a environmental variable at the top of qct-parse.py which can be used to reset the config directory:     
+```bash
+CONFIG_ENVIRONMENT_VARIABLE_NAME = 'QCT_PARSE_CONFIG_DIRECTORY'
+```
+Simply place the full path to the user created config *directory* in place of 'QCT_PARSE_CONFIG_DIRECTORY'
+
+## Thumbnails
+
+Thumbnails of failed frames will be exported if the `-te` flag is invoked. 
 
 In order to export thumbnails, the QCTools report must be in the same directory as the video file it is describing, and must have the same file name as the report (excluding the `qctools.xml.gz`).
 
+If you would like to provide a path for exporting thumbnails, you can do so using the `-tep` flag.     
+Otherwise, thumbnails will automatically be created in the same directory as the video file and QCTools report, in a new directory.
+
+When running qct-parse with a profile, the thumbnails will be placed in a directory named `ThumbExports`.
+When run against single tags the directory will be named [TAG NAME].[THRESHOLD]
+
 ## Logging
 
-A log file is created with the same name as the input file but with a '.log' extension.
+A log file is created with the same name as the input file but with a '.log' extension.    
 For example: `some_video_file.mkv.qctools.xml.gz.log`
 
-Log files contain every instance of values over the specified threshold. For example:
+Log files contain every instance of values over the specified threshold. For example:    
 `2024-10-03 17:02:35,737 SATMAX is over 181.02 with a value of 698.0 at duration 00:00:16.4500`
 
 ---
@@ -133,20 +160,20 @@ Log files contain every instance of values over the specified threshold. For exa
 
 Not in active development. Please file an issue if you are interested in using these.
 
-- **`makeqctoolsreport`**
+#### `makeqctoolsreport`
 
 A Python port of Morgan’s [makeqctoolsreport.as](https://github.com/iamdamosuzuki/QCToolsReport), this script generates QCTools `.xml.gz` reports from input video files.
 
-## Example Usage
+Example Usage:
 ```bash
 makeqctoolsreport /path/to/input.mxf
 ```
 
-- **`overcatch`**
+#### `overcatch`
 
 A script from the original qct-parse development for running a report against multiple profiles.
 
-## Example Usage
+Example Usage:
 ```bash
 overcatch /path/to/input.mxf
 ```
