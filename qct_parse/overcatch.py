@@ -86,4 +86,5 @@ def printout(barOutDict,contentOutDict,profileDict):
 		for cod in contentOutDict:
 			print("Frames beyond " + profileDict[cod] + " for " + contentOutDict[cod])
 
-main()
+if __name__ == '__main__':
+	main()

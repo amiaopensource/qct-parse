@@ -1,0 +1,26 @@
+[project]
+name = "qct-parse"
+version = "0.2.1.dev0"
+dependencies =[
+    'lxml'
+]
+
+[tool.setuptools]
+packages=['qct_parse']
+include-package-data = true
+
+[tool.setuptools.package-data]
+qct_parse = ["./qct-parse_8bit_config.txt", "./qct-parse_10bit_config.txt"]
+
+[project.scripts]
+makeqctoolsreport = "qct_parse.makeqctoolsreport:main"
+overcatch = "qct_parse.overcatch:main"
+qct-parse = "qct_parse.qct_parse:main"
+
+[tool.tox]
+envlist = ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+[tool.tox.env_run_base]
+description = "Run test under {base_python}"
+commands = [["pytest"]]
+deps = ["pytest"]
