@@ -92,7 +92,21 @@ def initLog(inputPath):
 	logPath = inputPath + '.log'
 	logging.basicConfig(filename=logPath,level=logging.INFO,format='%(asctime)s %(message)s')
 	logging.info("Started QCT-Parse")
-	
+
+def set_logger(input_path):
+	log_path = f'{input_path}.log'
+	logger = logging.getLogger()
+	if logger.hasHandlers():
+		logger.handlers.clear()
+	logger.setLevel(logging.INFO)
+
+	file_handler = logging.FileHandler(filename=log_path)
+	file_handler.setLevel(logging.INFO)
+	file_handler.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+	logger.addHandler(file_handler)
+	logger.info("Started QCT-Parse")
+
+
 
 # finds stuff over/under threshold
 def threshFinder(inFrame,args,startObj,pkt,tag,over,thumbPath,thumbDelay,adhoc_tag):
@@ -615,7 +629,7 @@ def printresults(kbeyond, frameCount, overallFrameFail):
 
 def get_arg_parser():
 	parser = argparse.ArgumentParser(description="parses QCTools XML files for frames beyond broadcast values")
-	parser.add_argument('-i','--input',dest='i', help="the path to the input qctools.xml.gz file")
+	parser.add_argument('-i','--input',dest='i', action='append', help="the path to the input qctools.xml.gz file")
 	parser.add_argument('-t','--tagname',dest='t', help="the tag name you want to test, e.g. SATMAX")
 	parser.add_argument('-o','--over',dest='o', help="the threshold overage number")
 	parser.add_argument('-u','--under',dest='u', help="the threshold under number")
@@ -631,11 +645,10 @@ def get_arg_parser():
 	parser.add_argument('-pr','--print',dest='pr',action='store_true',default=False, help="print over/under frame data to console window")
 	parser.add_argument('-q','--quiet',dest='q',action='store_true',default=False, help="hide ffmpeg output from console window")
 	return parser
-	
 
-def parse_qc_tools_report(args):
-	##### Initialize variables and buffers ######
-	startObj = args.i.replace("\\","/")
+
+def parse_single_qc_tools_report(input_file, args):
+	startObj = input_file.replace("\\","/")
 	extension = os.path.splitext(startObj)[1]
 	# If qctools report is in an MKV attachment, extract .qctools.xml.gz report
 	if extension.lower().endswith('mkv'):
@@ -643,7 +656,7 @@ def parse_qc_tools_report(args):
 	buffSize = int(args.buff)   # cast the input buffer as an integer
 	if buffSize%2 == 0:
 		buffSize = buffSize + 1
-	initLog(startObj)	# initialize the log
+	set_logger(startObj)
 	overcount = 0	# init count of overs
 	undercount = 0	# init count of unders
 	count = 0		# init total frames counter
@@ -770,7 +783,10 @@ def parse_qc_tools_report(args):
 
 	print(f"\nFinished Processing File: {baseName}.qctools.xml.gz\n")
 
-	return
+def parse_qc_tools_report(args):
+	##### Initialize variables and buffers ######
+	for input_file in args.i:
+		parse_single_qc_tools_report(input_file, args)
 
 def main():
 	"""
