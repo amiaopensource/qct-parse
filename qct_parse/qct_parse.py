@@ -19,6 +19,7 @@ import operator
 import time
 import json
 import shutil 			# dependency checking
+import csv
 
 
 CONFIG_ENVIRONMENT_VARIABLE_NAME = 'QCT_PARSE_CONFIG_DIRECTORY'
@@ -627,6 +628,65 @@ def printresults(kbeyond, frameCount, overallFrameFail):
 	print(f"Frames With At Least One Fail:\t{overallFrameFail}\t{color}{percent_overall_string}{RESET}\t% of the total # of frames\n")
 	print(f"{BOLD}**************************{RESET}\n")
 
+
+def print_results_to_csv(kbeyond, frameCount, overallFrameFail, startObj, output_file):
+    """
+    Writes the analysis results of frame data to a CSV file.
+
+    Args:
+        kbeyond (dict): A dictionary where keys are tag names and values are the counts of frames
+                        that exceed the threshold for each tag.
+        frameCount (int): The total number of frames analyzed.
+        overallFrameFail (int): The number of frames where at least one tag exceeds its threshold.
+        output_file (str): The name of the CSV file to save the results.
+
+    Outputs:
+        A CSV file with the following structure:
+            - TotalFrames: [frameCount]
+            - By Tag: [Tag, Count, Percentage]
+            - Overall: Frames With At Least One Fail, Count, Percentage
+
+    Notes:
+        - Percentages are formatted as whole numbers (e.g., "100"), two decimal places 
+          (e.g., "12.34"), or "<0.01" for values less than 0.01%.
+    """
+
+    def format_percentage(value):
+        percent = value * 100
+        if percent == 100:
+            return "100"
+        elif percent == 0:
+            return "0"
+        elif percent < 0.01:
+            return "<0.01"
+        else:
+            return f"{percent:.2f}"
+
+    # Write results to CSV
+    with open(output_file, mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+
+        # Title row
+        writer.writerow(["qct-parse summary report for file:", startObj])
+		
+		# Total Frames
+        writer.writerow(["TotalFrames", frameCount])
+
+        # By Tag
+        writer.writerow(["By Tag"])
+        writer.writerow(["Tag", "Count", "Percentage of Total Frames"])
+        for tag, count in kbeyond.items():
+            percent = count / frameCount
+            writer.writerow([tag, count, format_percentage(percent)])
+
+        # Overall
+        writer.writerow([])
+        writer.writerow(["Overall"])
+        overall_percent = overallFrameFail / frameCount
+        writer.writerow(["Frames With At Least One Fail", overallFrameFail, format_percentage(overall_percent)])
+
+    print(f"Results successfully written to {output_file}")
+
 def get_arg_parser():
 	parser = argparse.ArgumentParser(description="parses QCTools XML files for frames beyond broadcast values")
 	parser.add_argument('-i','--input',dest='i', action='append', help="the path to the input qctools.xml.gz file")
@@ -643,6 +703,7 @@ def get_arg_parser():
 	parser.add_argument('-bd','--barsDetection',dest='bd',action ='store_true',default=False, help="turns Bar Detection on and off")
 	parser.add_argument('-be','--barsEvaluation',dest='be',action ='store_true',default=False, help="turns Color Bar Evaluation on and off")
 	parser.add_argument('-pr','--print',dest='pr',action='store_true',default=False, help="print over/under frame data to console window")
+	parser.add_argument('-csv', '--csvreport',dest='csv',action ='store_true',default=False, help="print summary results to a csv sidecar file")
 	parser.add_argument('-q','--quiet',dest='q',action='store_true',default=False, help="hide ffmpeg output from console window")
 	return parser
 
@@ -667,6 +728,11 @@ def parse_single_qc_tools_report(input_file, args):
 	baseName = baseName.replace(".qctools.xml.gz", "")
 	durationStart = args.ds
 	durationEnd = args.de
+	# set the path for the csv report
+	if args.csv:
+		result_csv_file = os.path.join(parentDir, str(baseName) + ".qct_summary_report.csv")
+	else:
+		result_csv_file = None
 
 	# we gotta find out if the qctools report has pkt_dts_time or pkt_pts_time ugh
 	with gzip.open(startObj) as xml:
@@ -733,7 +799,11 @@ def parse_single_qc_tools_report(input_file, args):
 				durationEnd = 99999999
 				profile = maxBarsDict
 				kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag=False)
-				printresults(kbeyond,frameCount,overallFrameFail)
+				if args.csv:
+					print_results_to_csv(kbeyond, frameCount, overallFrameFail, startObj, result_csv_file)
+					printresults(kbeyond,frameCount,overallFrameFail)
+				else:
+					printresults(kbeyond,frameCount,overallFrameFail)
 		else:
 			durationStart = ""
 			durationEnd = ""
@@ -767,7 +837,11 @@ def parse_single_qc_tools_report(input_file, args):
 			######## Iterate Through the XML for General Analysis ########
 			print(f"\nStarting Analysis on {baseName} using assigned profile {template}\n")
 			kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag=False)
-			printresults(kbeyond,frameCount,overallFrameFail)
+			if args.csv:
+				print_results_to_csv(kbeyond, frameCount, overallFrameFail, startObj, result_csv_file)
+				printresults(kbeyond,frameCount,overallFrameFail)
+			else:
+				printresults(kbeyond,frameCount,overallFrameFail)
 
 	if args.t and args.o or args.u:
 		profile = {}
@@ -779,7 +853,11 @@ def parse_single_qc_tools_report(input_file, args):
 		profile[tag] = over
 		print(f"\nStarting Analysis on {baseName} using user specified tag {tag} w/ threshold {over}\n")
 		kbeyond, frameCount, overallFrameFail = analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thumbDelay,framesList,adhoc_tag = True)
-		printresults(kbeyond,frameCount,overallFrameFail)
+		if args.csv:
+			print_results_to_csv(kbeyond, frameCount, overallFrameFail, startObj, result_csv_file)
+			printresults(kbeyond,frameCount,overallFrameFail)
+		else:
+			printresults(kbeyond,frameCount,overallFrameFail)
 
 	print(f"\nFinished Processing File: {baseName}.qctools.xml.gz\n")
 
