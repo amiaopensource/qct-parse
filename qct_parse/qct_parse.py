@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-# qct-parse - changes made for python3 compatibility. WIP. 
+#qct-parse - changes made for python3 compatibility. WIP. 
 
-# see this link for lxml goodness: http://www.ibm.com/developerworks/xml/library/x-hiperfparse/
+#see this link for lxml goodness: http://www.ibm.com/developerworks/xml/library/x-hiperfparse/
 
 from lxml import etree  # for reading XML file (you will need to install this with pip)
 import argparse         # for parsing input args
@@ -24,18 +24,8 @@ import csv
 
 CONFIG_ENVIRONMENT_VARIABLE_NAME = 'QCT_PARSE_CONFIG_DIRECTORY'
 
-
-# check that we have required software installed
+#check that we have required software installed
 def dependencies():
-	"""
-    Checks if required software dependencies are installed.
-
-    This function checks for the presence of 'ffmpeg' and 'ffprobe' on the system.
-    If either of these is not found, it prints an error message and exits the program.
-
-    Returns:
-    	None
-    """
 	depends = ['ffmpeg','ffprobe']
 	for d in depends:
 		if shutil.which(d) is None:
@@ -43,41 +33,30 @@ def dependencies():
 			sys.exit()
 	return
 
-
-# Creates timestamp for pkt_dts_time
+#Creates timestamp for pkt_dts_time
 def dts2ts(frame_pkt_dts_time):
-	"""
-    Converts a given pkt_dts_time to a human-readable timestamp formatted as HH:MM:SS.SSSS.
+    seconds = float(frame_pkt_dts_time)
+    hours, seconds = divmod(seconds, 3600)
+    minutes, seconds = divmod(seconds, 60)
+    if hours < 10:
+        hours = "0" + str(int(hours))
+    else:
+        hours = str(int(hours))  
+    if minutes < 10:
+        minutes = "0" + str(int(minutes))
+    else:
+        minutes = str(int(minutes))
+    secondsStr = str(round(seconds,4))
+    if int(seconds) < 10:
+        secondsStr = "0" + secondsStr
+    else:
+        seconds = str(minutes)
+    while len(secondsStr) < 7:
+        secondsStr = secondsStr + "0"
+    timeStampString = hours + ":" + minutes + ":" + secondsStr
+    return timeStampString
 
-    Args:
-        frame_pkt_dts_time (float or str): The pkt_dts_time value from the QCTools <frame> XML.
-
-    Returns:
-        str: A timestamp string in the format HH:MM:SS.SSSS.
-    """
-	seconds = float(frame_pkt_dts_time)
-	hours, seconds = divmod(seconds, 3600)
-	minutes, seconds = divmod(seconds, 60)
-	if hours < 10:
-		hours = "0" + str(int(hours))
-	else:
-		hours = str(int(hours))  
-	if minutes < 10:
-		minutes = "0" + str(int(minutes))
-	else:
-		minutes = str(int(minutes))
-	secondsStr = str(round(seconds,4))
-	if int(seconds) < 10:
-		secondsStr = "0" + secondsStr
-	else:
-		seconds = str(minutes)
-	while len(secondsStr) < 7:
-		secondsStr = secondsStr + "0"
-	timeStampString = hours + ":" + minutes + ":" + secondsStr
-	return timeStampString
-
-
-# initializes the log
+#initializes the log
 def initLog(inputPath):
 	"""
     Initializes a log file for the given input file.
@@ -195,33 +174,7 @@ def get_video_resolution(input_video):
 
 # print thumbnail images of overs/unders	
 def printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString):
-	"""
-    Generates a thumbnail image from the video based on a timestamp and attribute value.
-
-    This function uses FFmpeg to create a thumbnail image at the specified timestamp (`timeStampString`)
-    from the input video file. The thumbnail is saved with a filename based on the input video's name,
-    the tag name, and its value. It ensures compatibility with Windows file paths by adjusting 
-    colons in the path if needed.
-
-    Args:
-        args (argparse.Namespace): Parsed command-line arguments.
-        tag (str): Tag name.
-        startObj (str): Path to the QCTools report file (.qctools.xml.gz)
-        thumbPath (str): The directory where the thumbnail image will be saved.
-        tagValue (float): The value of the tag to include in the thumbnail's filename.
-        timeStampString (str): The timestamp (HH:MM:SS.SSSS) at which to generate the thumbnail.
-
-    Returns:
-        None
-
-    Behavior:
-        - Constructs the input video path by removing the `.qctools.xml.gz` extension from `startObj`.
-        - If the input video file exists, it generates a thumbnail using FFmpeg at the given timestamp with a hardcoded resolution of 720x486.
-        - If running on Windows, adjusts the file path to account for the colon (":") in drive letters.
-        - If verbose mode is enabled (`args.q` is False), prints FFmpeg's standard output and errors.
-        - Exits the program if the video file is not found in the expected directory.
-    """
-	#### init some variables using the args list
+	####init some variables using the args list
 	inputVid = startObj.replace(".qctools.xml.gz", "")
 	if os.path.isfile(inputVid):
 		# Get the resolution using ffprobe
@@ -239,7 +192,7 @@ def printThumb(args,tag,startObj,thumbPath,tagValue,timeStampString):
 		# for windows we gotta see if that first : for the drive has been replaced by a dot and put it back
 
 		match = ''
-		match = re.search(r"[A-Z]\.\/",ffoutputFramePath) # matches pattern R./ which should be R:/ on windows
+		match = re.search(r"[A-Z]\.\/",ffoutputFramePath) #matches pattern R./ which should be R:/ on windows
 		if match:
 			ffoutputFramePath = ffoutputFramePath.replace(".",":",1) # replace first instance of "." in string ffoutputFramePath
 
@@ -307,15 +260,15 @@ def detectBars(args,startObj,pkt,durationStart,durationEnd,framesList,buffSize,b
 		YDIF_thresh = 3.0
 	
 	with gzip.open(startObj) as xml:
-		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): # iterparse the xml doc
-			if elem.attrib['media_type'] == "video": # get just the video frames
-				frame_pkt_dts_time = elem.attrib[pkt] # get the timestamps for the current frame we're looking at
-				frameDict = {}  # start an empty dict for the new frame
-				frameDict[pkt] = frame_pkt_dts_time  # give the dict the timestamp, which we have now
-				for t in list(elem):    # iterating through each attribute for each element
-					keySplit = t.attrib['key'].split(".")   # split the names by dots 
-					keyName = str(keySplit[-1])             # get just the last word for the key name
-					frameDict[keyName] = t.attrib['value']	# add each attribute to the frame dictionary
+		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): #iterparse the xml doc
+			if elem.attrib['media_type'] == "video": #get just the video frames
+				frame_pkt_dts_time = elem.attrib[pkt] #get the timestamps for the current frame we're looking at
+				frameDict = {}  #start an empty dict for the new frame
+				frameDict[pkt] = frame_pkt_dts_time  #give the dict the timestamp, which we have now
+				for t in list(elem):    #iterating through each attribute for each element
+					keySplit = t.attrib['key'].split(".")   #split the names by dots 
+					keyName = str(keySplit[-1])             #get just the last word for the key name
+					frameDict[keyName] = t.attrib['value']	#add each attribute to the frame dictionary
 				framesList.append(frameDict)
 				middleFrame = int(round(float(len(framesList))/2))	# i hate this calculation, but it gets us the middle index of the list as an integer
 				if len(framesList) == buffSize:	# wait till the buffer is full to start detecting bars
@@ -378,25 +331,25 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 	for k,v in profile.items(): 
 		kbeyond[k] = 0
 	with gzip.open(startObj) as xml:	
-		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): # iterparse the xml doc
-			if elem.attrib['media_type'] == "video": 	# get just the video frames
+		for event, elem in etree.iterparse(xml, events=('end',), tag='frame'): #iterparse the xml doc
+			if elem.attrib['media_type'] == "video": 	#get just the video frames
 				frameCount = frameCount + 1
-				frame_pkt_dts_time = elem.attrib[pkt] 	# get the timestamps for the current frame we're looking at
-				if frame_pkt_dts_time >= str(durationStart): 	# only work on frames that are after the start time
+				frame_pkt_dts_time = elem.attrib[pkt] 	#get the timestamps for the current frame we're looking at
+				if frame_pkt_dts_time >= str(durationStart): 	#only work on frames that are after the start time
 					if durationEnd:
-						if float(frame_pkt_dts_time) > durationEnd:		# only work on frames that are before the end time
+						if float(frame_pkt_dts_time) > durationEnd:		#only work on frames that are before the end time
 							print("started at " + str(durationStart) + " seconds and stopped at " + str(frame_pkt_dts_time) + " seconds (" + dts2ts(frame_pkt_dts_time) + ") or " + str(frameCount) + " frames!")
 							break
-					frameDict = {}  								# start an empty dict for the new frame
-					frameDict[pkt] = frame_pkt_dts_time  			# make a key for the timestamp, which we have now
-					for t in list(elem):    						# iterating through each attribute for each element
-						keySplit = t.attrib['key'].split(".")   	# split the names by dots 
-						keyName = str(keySplit[-1])             	# get just the last word for the key name
-						if len(keyName) == 1:						# if it's psnr or mse, keyName is gonna be a single char
-							keyName = '.'.join(keySplit[-2:])		# full attribute made by combining last 2 parts of split with a period in btw
-						frameDict[keyName] = t.attrib['value']		# add each attribute to the frame dictionary
-					framesList.append(frameDict)					# add this dict to our circular buffer
-					if args.pr is True:	# display "timestamp: Tag Value" (654.754100: YMAX 229) to the terminal window
+					frameDict = {}  								#start an empty dict for the new frame
+					frameDict[pkt] = frame_pkt_dts_time  			#make a key for the timestamp, which we have now
+					for t in list(elem):    						#iterating through each attribute for each element
+						keySplit = t.attrib['key'].split(".")   	#split the names by dots 
+						keyName = str(keySplit[-1])             	#get just the last word for the key name
+						if len(keyName) == 1:						#if it's psnr or mse, keyName is gonna be a single char
+							keyName = '.'.join(keySplit[-2:])		#full attribute made by combining last 2 parts of split with a period in btw
+						frameDict[keyName] = t.attrib['value']		#add each attribute to the frame dictionary
+					framesList.append(frameDict)					#add this dict to our circular buffer
+					if args.pr is True:	#display "timestamp: Tag Value" (654.754100: YMAX 229) to the terminal window
 						print(framesList[-1][pkt] + ": " + args.t + " " + framesList[-1][args.t])
 					# Now we can parse the frame data from the buffer!	
 					for k,v in profile.items():
@@ -410,7 +363,7 @@ def analyzeIt(args,profile,startObj,pkt,durationStart,durationEnd,thumbPath,thum
 								overallFrameFail = overallFrameFail + 1
 								fots = frame_pkt_dts_time # set it again so we don't dupe
 					thumbDelay = thumbDelay + 1				
-			elem.clear() # we're done with that element so let's get it outta memory
+			elem.clear() #we're done with that element so let's get it outta memory
 	return kbeyond, frameCount, overallFrameFail
 
 
