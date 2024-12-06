@@ -8,7 +8,6 @@ import re
 import gzip
 import shutil
 import argparse
-from distutils import spawn
 
 #Context manager for changing the current working directory
 class cd:
@@ -26,7 +25,7 @@ class cd:
 def dependencies():
 	depends = ['ffmpeg','ffprobe']
 	for d in depends:
-		if spawn.find_executable(d) is None:
+		if shutil.which(d) is None:
 			print("Buddy, you gotta install " + d)
 			sys.exit()
 	return
@@ -134,6 +133,7 @@ def makeReport(startObj, outPath):
 		os.remove(startObj + '.temp1.nut')
 
 def main():
+	dependencies()
 	####init the stuff from the cli########
 	parser = argparse.ArgumentParser(description="parses QCTools XML files for frames beyond broadcast values")
 	parser.add_argument('-i','--input',dest='i',help="the path to the input video file")
@@ -164,6 +164,5 @@ def main():
 			startObj = startObj + ".temp1.nut"
 	makeReport(startObj,outPath)
 
-dependencies()
 if __name__ == '__main__':
 	main()
